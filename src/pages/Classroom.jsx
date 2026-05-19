@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useCurrentUser } from '@/lib/useCurrentUser';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -6,12 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Video, VideoOff, Mic, MicOff, Phone, PhoneOff, Users, Monitor, Copy, Check, ExternalLink } from 'lucide-react';
+import { Video, VideoOff, Mic, MicOff, Phone, PhoneOff, Users, Copy, Check, ExternalLink } from 'lucide-react';
 
 function generateRoomId(courseId, teacherEmail) {
-  // Odanın ID'si öğretmenin email'ine dayalı + rastgele suffix — benzersiz ve gizli
   const base = teacherEmail ? teacherEmail.split('@')[0].replace(/[^a-z0-9]/gi, '') : 'teacher';
   return `gunes-${base}-${Math.random().toString(36).substr(2, 6)}`;
+}
+
+// Detect if running inside Capacitor native app
+function isCapacitor() {
+  return window.Capacitor?.isNativePlatform?.() || window.Capacitor?.isPluginAvailable?.('App') || false;
 }
 
 export default function Classroom() {
@@ -22,7 +26,8 @@ export default function Classroom() {
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
   const [copied, setCopied] = useState(false);
-  const iframeRef = useRef(null);
+  const jitsiContainerRef = useRef(null);
+  const jitsiApiRef = useRef(null);
 
   const queryClient = useQueryClient();
   const [activeVirtualRoomId, setActiveVirtualRoomId] = useState(null);
@@ -63,6 +68,11 @@ export default function Classroom() {
   };
 
   const endCall = async () => {
+    // Dispose Jitsi API instance
+    if (jitsiApiRef.current) {
+      jitsiApiRef.current.dispose();
+      jitsiApiRef.current = null;
+    }
     if (activeVirtualRoomId) {
       await endRoomMutation.mutateAsync(activeVirtualRoomId);
       setActiveVirtualRoomId(null);
@@ -71,7 +81,7 @@ export default function Classroom() {
     setRoomId('');
   };
 
-  const studentLink = `${window.location.origin}/student-classroom`;
+  const studentLink = `${window.location.origin}${window.location.pathname}#/student-classroom`;
 
   const copyLink = () => {
     const link = `https://meet.jit.si/${roomId}`;
@@ -80,9 +90,93 @@ export default function Classroom() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const meetUrl = roomId
-    ? `https://meet.jit.si/${roomId}#config.startWithAudioMuted=${!micOn}&config.startWithVideoMuted=${!camOn}&userInfo.displayName=${encodeURIComponent(user?.full_name || 'User')}`
-    : '';
+  // Load Jitsi Meet External API when in call
+  useEffect(() => {
+    if (!inCall || !roomId) return;
+
+    const loadJitsi = () => {
+      // Check if script already loaded
+      if (window.JitsiMeetExternalAPI) {
+        initJitsi();
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://meet.jit.si/external_api.js';
+      script.async = true;
+      script.onload = () => initJitsi();
+      script.onerror = () => {
+        console.error('Failed to load Jitsi API, falling back to iframe');
+        // Fallback: open in browser
+        if (isCapacitor()) {
+          window.open(`https://meet.jit.si/${roomId}`, '_system');
+        }
+      };
+      document.head.appendChild(script);
+    };
+
+    const initJitsi = () => {
+      if (!jitsiContainerRef.current) return;
+      // Clear container
+      jitsiContainerRef.current.innerHTML = '';
+
+      try {
+        const api = new window.JitsiMeetExternalAPI('meet.jit.si', {
+          roomName: roomId,
+          parentNode: jitsiContainerRef.current,
+          width: '100%',
+          height: '100%',
+          configOverwrite: {
+            startWithAudioMuted: !micOn,
+            startWithVideoMuted: !camOn,
+            disableDeepLinking: true,      // KEY: prevents "Join in app" screen
+            disableThirdPartyRequests: true,
+            prejoinPageEnabled: false,     // Skip pre-join screen on mobile
+            disableInviteFunctions: true,
+          },
+          interfaceConfigOverwrite: {
+            SHOW_JITSI_WATERMARK: false,
+            SHOW_WATERMARK_FOR_GUESTS: false,
+            MOBILE_APP_PROMO: false,       // KEY: hides app download prompt
+            DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
+            SHOW_CHROME_EXTENSION_BANNER: false,
+          },
+          userInfo: {
+            displayName: user?.full_name || 'User',
+            email: user?.email || '',
+          },
+        });
+
+        jitsiApiRef.current = api;
+
+        api.addEventListener('readyToClose', () => {
+          endCall();
+        });
+      } catch (err) {
+        console.error('Jitsi init error:', err);
+        // Fallback for any error
+        if (jitsiContainerRef.current) {
+          jitsiContainerRef.current.innerHTML = `
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:16px;padding:20px;text-align:center;">
+              <p style="font-size:14px;color:#666;">Video couldn't load in the app.</p>
+              <a href="https://meet.jit.si/${roomId}" target="_blank" rel="noreferrer" 
+                 style="background:#3b82f6;color:white;padding:12px 24px;border-radius:12px;text-decoration:none;font-weight:600;">
+                 Open in Browser
+              </a>
+            </div>`;
+        }
+      }
+    };
+
+    loadJitsi();
+
+    return () => {
+      if (jitsiApiRef.current) {
+        jitsiApiRef.current.dispose();
+        jitsiApiRef.current = null;
+      }
+    };
+  }, [inCall, roomId]);
 
   return (
     <div className="space-y-6 pb-24 sm:pb-0">
@@ -171,7 +265,6 @@ export default function Classroom() {
                   value={roomId}
                   onChange={e => {
                     let val = e.target.value;
-                    // Extract room ID from full URL if pasted
                     if (val.includes('meet.jit.si/')) {
                       val = val.split('meet.jit.si/')[1].split('#')[0];
                     }
@@ -186,8 +279,6 @@ export default function Classroom() {
               </Button>
             </CardContent>
           </Card>
-
-
         </div>
       ) : (
         <div className="space-y-3">
@@ -221,15 +312,18 @@ export default function Classroom() {
           </div>
           </div>
 
-          {/* Jitsi Meet iframe */}
-          <div className="rounded-2xl overflow-hidden border border-border shadow-lg" style={{ height: '70vh', minHeight: 480 }}>
-            <iframe
-              ref={iframeRef}
-              src={meetUrl}
-              allow="camera; microphone; fullscreen; display-capture; autoplay"
-              className="w-full h-full border-0"
-              title="Virtual Classroom"
-            />
+          {/* Jitsi Meet Container — External API renders here */}
+          <div 
+            ref={jitsiContainerRef}
+            className="rounded-2xl overflow-hidden border border-border shadow-lg bg-black" 
+            style={{ height: '70vh', minHeight: 480 }}
+          >
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="text-center text-white/60">
+                <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-sm">Connecting to video room...</p>
+              </div>
+            </div>
           </div>
         </div>
       )}
