@@ -13,6 +13,7 @@ import { useCurrentUser } from '@/lib/useCurrentUser';
 import { useAuth } from '@/lib/AuthContext';
 import { canAccess, getRoleLabel, getRoleBadgeColor } from '@/lib/roles';
 import { Badge } from '@/components/ui/badge';
+import { useLessonReminder } from '@/hooks/useLessonReminder';
 import { Switch } from '@/components/ui/switch';
 import MobileBottomNav from '@/components/MobileBottomNav';
 import TeamChatSidebar from '@/components/chat/TeamChatSidebar';
@@ -83,6 +84,9 @@ export default function Layout() {
   const { logout } = useAuth();
   const [pendingNotifications, setPendingNotifications] = useState(0);
   const [newFormSubmissions, setNewFormSubmissions] = useState(0);
+
+  // Auto lesson reminders (runs every 60s for admin)
+  useLessonReminder(user);
 
   const role = (user?.matched_role || user?.role) || 'user';
 
@@ -233,8 +237,12 @@ export default function Layout() {
         {user && (
           <div className="px-4 py-3 border-b border-sidebar-border">
             <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0">
-                <span className="text-xs font-black text-primary">{user.full_name?.charAt(0)?.toUpperCase() || '?'}</span>
+              <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                {user.profile_photo_url ? (
+                  <img src={user.profile_photo_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xs font-black text-primary">{user.full_name?.charAt(0)?.toUpperCase() || '?'}</span>
+                )}
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-sidebar-foreground truncate leading-none">{user.full_name || user.email}</p>
@@ -381,10 +389,14 @@ export default function Layout() {
               </Button>
             )}
             {user && <span className="text-sm text-muted-foreground hidden sm:block max-w-[120px] truncate">{user.full_name || user.email}</span>}
-            <Link to="/Profile" className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center border border-primary/20 hover:border-primary/40 transition-colors flex-shrink-0">
-              <span className="text-xs font-black text-primary">
-                {user?.full_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || '?'}
-              </span>
+            <Link to="/Profile" className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center border border-primary/20 hover:border-primary/40 transition-colors flex-shrink-0 overflow-hidden">
+              {user?.profile_photo_url ? (
+                <img src={user.profile_photo_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-xs font-black text-primary">
+                  {user?.full_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || '?'}
+                </span>
+              )}
             </Link>
           </div>
         </header>

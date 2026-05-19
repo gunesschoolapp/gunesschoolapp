@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import { NotificationService } from '@/lib/NotificationService';
 
 // ─── Upload Form ────────────────────────────────────────
 function UploadForm({ courses, students, onSave, onCancel, existing }) {
@@ -341,6 +342,40 @@ export default function TeacherResources() {
         teacher_email: user.email,
         teacher_name: user.full_name,
       });
+
+      // Send notification to affected students
+      try {
+        const recipientEmails = new Set();
+        // Students from selected courses
+        if (data.visible_courses?.length) {
+          for (const cid of data.visible_courses) {
+            const course = courses.find(c => c.id === cid);
+            if (course?.enrolled_students?.length) {
+              for (const sid of course.enrolled_students) {
+                const s = students.find(st => st.id === sid);
+                if (s?.email) recipientEmails.add(s.email);
+              }
+            }
+          }
+        }
+        // Directly selected students
+        if (data.visible_students?.length) {
+          for (const sid of data.visible_students) {
+            const s = students.find(st => st.id === sid);
+            if (s?.email) recipientEmails.add(s.email);
+          }
+        }
+        if (recipientEmails.size > 0) {
+          await NotificationService.sendNewResource({
+            teacherName: user.full_name,
+            resourceName: data.name,
+            recipientEmails: [...recipientEmails],
+          });
+        }
+      } catch (notifErr) {
+        console.error('Notification send error:', notifErr);
+      }
+
       toast({ title: '✅ Resource shared!' });
       setShowForm(false);
       loadData();

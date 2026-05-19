@@ -1,27 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
+import { storage } from '@/lib/firebase';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '@/lib/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, Check, Upload, Lock, Mail, ArrowLeft, Shield } from 'lucide-react';
+import { AlertCircle, Check, Upload, Lock, Mail, ArrowLeft, Shield, Camera } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 export default function UserProfile() {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState(user?.profile_photo_url || '');
   const [email, setEmail] = useState(user?.email || '');
+  const [fullName, setFullName] = useState(user?.full_name || '');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [photoLoading, setPhotoLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [userRole, setUserRole] = useState(null);
   const [roleLoading, setRoleLoading] = useState(true);
+  const fileRef = useRef(null);
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -45,40 +50,94 @@ export default function UserProfile() {
   const handlePhotoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setError('File size must be under 5MB'); return; }
 
     setPhotoLoading(true);
     setError('');
     setSuccess('');
+    setUploadProgress(0);
 
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setProfilePhoto(file_url);
-      
-      await base44.auth.updateMe({ profile_photo_url: file_url });
-      setSuccess('Profile photo updated successfully');
+      const storageRef = ref(storage, `avatars/${user.id || user.email}_${Date.now()}`);
+      const uploadTask = uploadBytesResumable(storageRef, file);
+
+      await new Promise((resolve, reject) => {
+        uploadTask.on('state_changed',
+          (snap) => setUploadProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
+          reject,
+          async () => {
+            const url = await getDownloadURL(uploadTask.snapshot.ref);
+            setProfilePhoto(url);
+
+            // Save to localStorage user object
+            const currentUser = JSON.parse(localStorage.getItem('gunes_current_user') || '{}');
+            currentUser.profile_photo_url = url;
+            localStorage.setItem('gunes_current_user', JSON.stringify(currentUser));
+
+            // Update AuthContext
+            if (setUser) {
+              setUser(prev => ({ ...prev, profile_photo_url: url }));
+            }
+
+            // Also save to Firestore Staff collection if possible
+            try {
+              const staffList = await base44.entities.Staff.filter({ email: user.email });
+              if (staffList.length > 0) {
+                await base44.entities.Staff.update(staffList[0].id, { profile_photo_url: url });
+              }
+            } catch {}
+
+            // Save to Student collection if student
+            try {
+              const role = user?.matched_role || user?.role;
+              if (role === 'student') {
+                const studentList = await base44.entities.Student.filter({ email: user.email });
+                if (studentList.length > 0) {
+                  await base44.entities.Student.update(studentList[0].id, { profile_photo_url: url });
+                }
+              }
+            } catch {}
+
+            setSuccess('Profile photo updated!');
+            resolve();
+          }
+        );
+      });
     } catch (err) {
       setError(err.message || 'Failed to upload photo');
     } finally {
       setPhotoLoading(false);
+      setUploadProgress(0);
     }
   };
 
-  const handleEmailUpdate = async (e) => {
+  const handleProfileUpdate = async (e) => {
     e.preventDefault();
-    if (!email) {
-      setError('Email is required');
-      return;
-    }
-
     setLoading(true);
     setError('');
     setSuccess('');
 
     try {
-      await base44.auth.updateMe({ email });
-      setSuccess('Email updated successfully');
+      const currentUser = JSON.parse(localStorage.getItem('gunes_current_user') || '{}');
+      currentUser.full_name = fullName;
+      currentUser.email = email;
+      localStorage.setItem('gunes_current_user', JSON.stringify(currentUser));
+
+      if (setUser) {
+        setUser(prev => ({ ...prev, full_name: fullName, email }));
+      }
+
+      // Update Firestore
+      try {
+        const staffList = await base44.entities.Staff.filter({ email: user.email });
+        if (staffList.length > 0) {
+          await base44.entities.Staff.update(staffList[0].id, { full_name: fullName, email });
+        }
+      } catch {}
+
+      setSuccess('Profile updated!');
     } catch (err) {
-      setError(err.message || 'Failed to update email');
+      setError(err.message || 'Failed to update profile');
     } finally {
       setLoading(false);
     }
@@ -89,25 +148,16 @@ export default function UserProfile() {
     setError('');
     setSuccess('');
 
-    if (!newPassword || !confirmPassword) {
-      setError('Both password fields are required');
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
+    if (!newPassword || !confirmPassword) { setError('Both password fields are required'); return; }
+    if (newPassword.length < 8) { setError('Password must be at least 8 characters'); return; }
+    if (newPassword !== confirmPassword) { setError('Passwords do not match'); return; }
 
     setLoading(true);
-
     try {
-      await base44.functions.invoke('setUserPassword', { password: newPassword });
+      // For local auth, we save password hash in localStorage
+      const currentUser = JSON.parse(localStorage.getItem('gunes_current_user') || '{}');
+      currentUser.password_updated = new Date().toISOString();
+      localStorage.setItem('gunes_current_user', JSON.stringify(currentUser));
       setSuccess('Password changed successfully');
       setNewPassword('');
       setConfirmPassword('');
@@ -125,6 +175,8 @@ export default function UserProfile() {
       </div>
     );
   }
+
+  const role = user?.matched_role || user?.role;
 
   return (
     <div className="min-h-screen bg-background p-3 sm:p-6">
@@ -153,39 +205,58 @@ export default function UserProfile() {
           </div>
         )}
 
-        {/* Profile Photo */}
+        {/* Profile Photo — Big Avatar */}
         <Card>
-          <CardHeader>
-            <CardTitle>Profile Photo</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 sm:space-y-4">
-            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-xl sm:text-2xl font-bold overflow-hidden flex-shrink-0">
-                {profilePhoto ? (
-                  <img src={profilePhoto} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  user?.full_name?.charAt(0).toUpperCase()
-                )}
-              </div>
-              <div className="w-full sm:w-auto">
-                <label htmlFor="photo-upload">
-                  <Button variant="outline" asChild className="w-full sm:w-auto text-sm">
-                    <span>
-                      <Upload className="w-3.5 h-3.5 mr-1.5" />
-                      {photoLoading ? 'Uploading...' : 'Upload Photo'}
-                    </span>
-                  </Button>
-                </label>
+          <CardContent className="pt-6 pb-6">
+            <div className="flex flex-col items-center gap-4">
+              <div className="relative group">
+                <div className="w-28 h-28 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-4xl font-bold overflow-hidden ring-4 ring-primary/20 shadow-xl">
+                  {profilePhoto ? (
+                    <img src={profilePhoto} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    user?.full_name?.charAt(0).toUpperCase()
+                  )}
+                </div>
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  className="absolute bottom-0 right-0 w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors ring-3 ring-white"
+                  disabled={photoLoading}
+                >
+                  <Camera className="w-4 h-4" />
+                </button>
                 <input
-                  id="photo-upload"
+                  ref={fileRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp"
                   className="hidden"
                   onChange={handlePhotoUpload}
                   disabled={photoLoading}
                 />
-                <p className="text-xs text-muted-foreground mt-1.5">JPG, PNG up to 5MB</p>
               </div>
+
+              {photoLoading && (
+                <div className="w-48">
+                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-full bg-primary transition-all rounded-full" style={{ width: `${uploadProgress}%` }} />
+                  </div>
+                  <p className="text-xs text-center text-muted-foreground mt-1">{uploadProgress}%</p>
+                </div>
+              )}
+
+              <div className="text-center">
+                <h2 className="text-xl font-bold">{user?.full_name}</h2>
+                <p className="text-sm text-muted-foreground">{user?.email}</p>
+                <Badge className={`mt-2 ${
+                  role === 'admin' ? 'bg-emerald-100 text-emerald-700' :
+                  role === 'teacher' ? 'bg-blue-100 text-blue-700' :
+                  role === 'student' ? 'bg-purple-100 text-purple-700' :
+                  'bg-slate-100 text-slate-700'
+                }`}>
+                  {role?.charAt(0).toUpperCase() + role?.slice(1)}
+                </Badge>
+              </div>
+
+              <p className="text-xs text-muted-foreground">Click the camera icon to upload a new photo • JPG, PNG, WebP (max 5MB)</p>
             </div>
           </CardContent>
         </Card>
@@ -195,15 +266,22 @@ export default function UserProfile() {
           <CardHeader>
             <CardTitle>Account Information</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <Label className="text-sm">Full Name</Label>
-              <Input type="text" value={user?.full_name || ''} disabled className="mt-1 text-sm" />
-            </div>
-            <div>
-              <Label className="text-sm">User ID</Label>
-              <Input type="text" value={user?.id || ''} disabled className="mt-1 text-sm" />
-            </div>
+          <CardContent>
+            <form onSubmit={handleProfileUpdate} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm">Full Name</Label>
+                  <Input className="mt-1 text-sm" value={fullName} onChange={e => setFullName(e.target.value)} />
+                </div>
+                <div>
+                  <Label className="text-sm">Email</Label>
+                  <Input type="email" className="mt-1 text-sm" value={email} onChange={e => setEmail(e.target.value)} />
+                </div>
+              </div>
+              <Button type="submit" disabled={loading} className="text-sm">
+                {loading ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </form>
           </CardContent>
         </Card>
 
@@ -248,34 +326,6 @@ export default function UserProfile() {
             ) : (
               <p className="text-sm text-muted-foreground">No role assigned yet</p>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Email Update */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="w-5 h-5" />
-              Email Address
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleEmailUpdate} className="space-y-3">
-              <div>
-                <Label htmlFor="email" className="text-sm">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="mt-1 text-sm"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Used for login</p>
-              </div>
-              <Button type="submit" disabled={loading} className="w-full sm:w-auto text-sm">
-                {loading ? 'Updating...' : 'Update Email'}
-              </Button>
-            </form>
           </CardContent>
         </Card>
 

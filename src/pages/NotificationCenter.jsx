@@ -7,544 +7,454 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MessageSquare, Bell, Settings, Plus, Trash2, CheckCircle, AlertCircle } from 'lucide-react';
+import {
+  Bell, Send, Plus, Trash2, Check, X, Search,
+  Users, BookOpen, Megaphone, Clock, Eye, MailOpen
+} from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
+import { NotificationService } from '@/lib/NotificationService';
 
 export default function NotificationCenter() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
-  const [activeTab, setActiveTab] = useState('notifications');
-  const [showTemplateForm, setShowTemplateForm] = useState(false);
-  const [showSendForm, setShowSendForm] = useState(false);
-  const [templateForm, setTemplateForm] = useState({
-    template_type: 'payment_reminder',
-    channel: 'whatsapp',
-    title: '',
-    template_text: '',
-    language: 'tr'
-  });
-  const [sendForm, setSendForm] = useState({
-    notification_type: 'announcement',
-    recipient_type: 'student',
-    student_id: '',
-    channels: [], // ['whatsapp', 'sms', 'chat', 'email']
-    phone_number: '',
-    email: '',
-    message: ''
-  });
+  const role = user?.matched_role || user?.role;
+  const isAdmin = ['admin', 'team_admin'].includes(role);
+  const [activeTab, setActiveTab] = useState('inbox');
+  const [showComposeDialog, setShowComposeDialog] = useState(false);
 
-  // Veri alma
+  // Data queries
   const { data: allNotifications = [] } = useQuery({
     queryKey: ['notifications'],
     queryFn: () => base44.entities.Notification.list('-created_date'),
-    refetchInterval: 10000
+    refetchInterval: 15000,
   });
 
-  // Non-admins only see their own notifications
-  const notifications = isAdmin ? allNotifications : allNotifications.filter(n => n.created_by === user?.email);
-
-  const { data: templates = [] } = useQuery({
-    queryKey: ['notification_templates'],
-    queryFn: () => base44.entities.NotificationTemplate.list()
+  const { data: courses = [] } = useQuery({
+    queryKey: ['courses'],
+    queryFn: () => base44.entities.Course.filter({}),
   });
+
+  const { data: students = [] } = useQuery({
+    queryKey: ['students'],
+    queryFn: () => base44.entities.Student.filter({}),
+  });
+
+  // Filter notifications by role
+  const notifications = useMemo(() => {
+    if (isAdmin) return allNotifications;
+    return allNotifications.filter(n =>
+      n.recipient_email === user?.email || n.sent_by === user?.full_name || n.created_by === user?.email
+    );
+  }, [allNotifications, user, isAdmin]);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+  const sentCount = notifications.filter(n => n.sent_by === user?.full_name || n.created_by === user?.email).length;
 
   // Mutations
-  const createTemplateMutation = useMutation({
-    mutationFn: (data) => base44.entities.NotificationTemplate.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notification_templates'] });
-      setShowTemplateForm(false);
-      setTemplateForm({ template_type: 'payment_reminder', channel: 'whatsapp', title: '', template_text: '', language: 'tr' });
-    }
-  });
-
-  const deleteTemplateMutation = useMutation({
-    mutationFn: (id) => base44.entities.NotificationTemplate.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notification_templates'] })
-  });
-
-  const deleteNotificationMutation = useMutation({
-    mutationFn: (id) => base44.entities.Notification.delete(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] })
-  });
-
-  const markAsReadMutation = useMutation({
+  const markReadMutation = useMutation({
     mutationFn: (id) => base44.entities.Notification.update(id, { read: true }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
   });
 
-  // Eski bildirimleri sil (30 günü geçen)
-  React.useEffect(() => {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Notification.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notifications'] }),
+  });
 
-    notifications.forEach(notif => {
-      const createdDate = new Date(notif.created_date);
-      if (createdDate < thirtyDaysAgo) {
-        base44.entities.Notification.delete(notif.id).catch(() => {});
-      }
-    });
-  }, []);
-
-  // İstatistikler
-   const stats = useMemo(() => {
-     return {
-       total: notifications.length,
-       sent: notifications.filter(n => n.status === 'sent').length,
-       pending: notifications.filter(n => n.status === 'pending').length,
-       failed: notifications.filter(n => n.status === 'failed').length,
-       unread: notifications.filter(n => !n.read).length
-     };
-   }, [notifications]);
-
-  const handleCreateTemplate = () => {
-    if (!templateForm.title || !templateForm.template_text) {
-      alert('Başlık ve template metni gerekli');
-      return;
-    }
-    createTemplateMutation.mutate(templateForm);
+  const markAllRead = async () => {
+    const unread = notifications.filter(n => !n.read);
+    await Promise.all(unread.map(n => base44.entities.Notification.update(n.id, { read: true })));
+    queryClient.invalidateQueries({ queryKey: ['notifications'] });
   };
 
-  const handleSendNotification = () => {
-    if (!sendForm.message || sendForm.channels.length === 0) {
-      alert('Mesaj ve en az bir kanal seçimi gerekli');
-      return;
-    }
-
-    // Her kanal için ayrı bildirim oluştur
-    const promises = sendForm.channels.map(channel => {
-      const notificationData = {
-        notification_type: sendForm.notification_type,
-        recipient_type: sendForm.recipient_type,
-        student_id: sendForm.student_id || null,
-        channel: channel,
-        phone_number: sendForm.phone_number || null,
-        email: sendForm.email || null,
-        message: sendForm.message,
-        status: 'pending'
-      };
-      return base44.entities.Notification.create(notificationData);
-    });
-
-    Promise.all(promises).then(() => {
-      queryClient.invalidateQueries({ queryKey: ['notifications'] });
-      setShowSendForm(false);
-      setSendForm({
-        notification_type: 'announcement',
-        recipient_type: 'student',
-        student_id: '',
-        channels: [],
-        phone_number: '',
-        email: '',
-        message: ''
-      });
-      alert(`${sendForm.channels.length} kanal üzerinden bildirim gönderildi`);
-    }).catch(() => alert('Bildirim gönderirken hata oluştu'));
+  // Notification type config
+  const typeConfig = {
+    lesson_reminder: { icon: '⏰', label: 'Lesson Reminder', color: 'bg-blue-100 text-blue-700' },
+    new_resource: { icon: '📄', label: 'New Resource', color: 'bg-emerald-100 text-emerald-700' },
+    payment: { icon: '💰', label: 'Payment', color: 'bg-green-100 text-green-700' },
+    announcement: { icon: '📢', label: 'Announcement', color: 'bg-purple-100 text-purple-700' },
+    custom: { icon: '✉️', label: 'Custom', color: 'bg-amber-100 text-amber-700' },
+    payment_reminder: { icon: '💸', label: 'Payment Reminder', color: 'bg-red-100 text-red-700' },
+    lesson_cancellation: { icon: '❌', label: 'Cancellation', color: 'bg-red-100 text-red-700' },
+    message: { icon: '💬', label: 'Message', color: 'bg-slate-100 text-slate-700' },
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 max-w-5xl mx-auto space-y-6">
       {/* Header */}
-       <div className="flex justify-between items-start gap-3 flex-wrap">
-         <div>
-           <h1 className="text-2xl font-bold tracking-tight">Bildirim Merkezi</h1>
-           <p className="text-muted-foreground mt-1">Çok kanallı (WhatsApp, SMS, Chat, Email) bildirimleri gönderin ve yönetin</p>
-         </div>
-         <div className="flex gap-2">
-           <Button onClick={() => setShowSendForm(true)} variant="default">
-             <Plus className="w-4 h-4 mr-2" /> Bildirim Gönder
-           </Button>
-           {isAdmin && (
-             <Button onClick={() => setShowTemplateForm(true)} variant="outline">
-               <Plus className="w-4 h-4 mr-2" /> Template Ekle
-             </Button>
-           )}
-         </div>
-       </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-3">
+            <Bell className="w-7 h-7 text-primary" />
+            Notification Center
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {isAdmin ? 'Send and manage notifications for students & staff' : 'Your notifications'}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          {unreadCount > 0 && (
+            <Button variant="outline" size="sm" onClick={markAllRead}>
+              <MailOpen className="w-4 h-4 mr-2" /> Mark All Read
+            </Button>
+          )}
+          {isAdmin && (
+            <Button onClick={() => setShowComposeDialog(true)}>
+              <Send className="w-4 h-4 mr-2" /> Send Notification
+            </Button>
+          )}
+        </div>
+      </div>
 
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-5 pb-4">
+            <p className="text-xs text-muted-foreground font-medium">Total</p>
+            <p className="text-2xl font-bold mt-1">{notifications.length}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-blue-200">
+          <CardContent className="pt-5 pb-4">
+            <p className="text-xs text-blue-600 font-medium">Unread</p>
+            <p className="text-2xl font-bold text-blue-600 mt-1">{unreadCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-emerald-200">
+          <CardContent className="pt-5 pb-4">
+            <p className="text-xs text-emerald-600 font-medium">Read</p>
+            <p className="text-2xl font-bold text-emerald-600 mt-1">{notifications.length - unreadCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-purple-200">
+          <CardContent className="pt-5 pb-4">
+            <p className="text-xs text-purple-600 font-medium">Sent by Me</p>
+            <p className="text-2xl font-bold text-purple-600 mt-1">{sentCount}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="notifications" className="gap-2">
-            <Bell className="w-4 h-4" /> Gönderilen Bildirimler
+          <TabsTrigger value="inbox" className="gap-2">
+            <Bell className="w-4 h-4" /> Inbox {unreadCount > 0 && <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-xs">{unreadCount}</Badge>}
           </TabsTrigger>
           {isAdmin && (
-            <TabsTrigger value="templates" className="gap-2">
-              <Settings className="w-4 h-4" /> Templates
+            <TabsTrigger value="sent" className="gap-2">
+              <Send className="w-4 h-4" /> Sent
             </TabsTrigger>
           )}
         </TabsList>
 
-        <TabsContent value="notifications" className="space-y-6">
-          {/* Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Toplam</p>
-                <p className="text-3xl font-bold mt-2">{stats.total}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Okunmamış</p>
-                <p className="text-3xl font-bold text-blue-600 mt-2">{stats.unread}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Gönderilen</p>
-                <p className="text-3xl font-bold text-green-600 mt-2">{stats.sent}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Bekleyen</p>
-                <p className="text-3xl font-bold text-amber-600 mt-2">{stats.pending}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Başarısız</p>
-                <p className="text-3xl font-bold text-red-600 mt-2">{stats.failed}</p>
-              </CardContent>
-            </Card>
-          </div>
+        <TabsContent value="inbox" className="mt-4 space-y-2">
+          {notifications.filter(n => !n.read).length === 0 ? (
+            <div className="text-center py-12">
+              <Bell className="w-12 h-12 mx-auto mb-3 text-muted-foreground/20" />
+              <p className="text-muted-foreground">No unread notifications</p>
+            </div>
+          ) : (
+            notifications.filter(n => !n.read).map(notif => {
+              const tc = typeConfig[notif.notification_type] || typeConfig.message;
+              return (
+                <div key={notif.id} className="bg-white border rounded-xl p-4 hover:shadow-sm transition-shadow">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-lg flex-shrink-0">
+                      {tc.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge className={`${tc.color} text-xs`}>{tc.label}</Badge>
+                        {notif.sent_by && (
+                          <span className="text-xs text-muted-foreground">from {notif.sent_by}</span>
+                        )}
+                      </div>
+                      <p className="text-sm font-medium">{notif.title || notif.notification_type}</p>
+                      <p className="text-sm text-muted-foreground mt-0.5 whitespace-pre-line">{notif.message}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Clock className="w-3 h-3 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">
+                          {notif.sent_at ? new Date(notif.sent_at).toLocaleString() : new Date(notif.created_date).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <button onClick={() => markReadMutation.mutate(notif.id)} className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600" title="Mark as read">
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => deleteMutation.mutate(notif.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-destructive" title="Delete">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
 
-          {/* Notifications Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Bildirim Geçmişi</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Okundu</TableHead>
-                      <TableHead>Tür</TableHead>
-                      <TableHead>Kanal</TableHead>
-                      <TableHead>Telefon</TableHead>
-                      <TableHead>Mesaj</TableHead>
-                      <TableHead>Durum</TableHead>
-                      <TableHead>Tarih</TableHead>
-                      <TableHead>İşlemler</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {notifications.filter(n => !n.read).length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                          Okunmamış bildirim yok
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      notifications.filter(n => !n.read).map(notif => (
-                        <TableRow key={notif.id} className={notif.read ? 'opacity-60' : ''}>
-                          <TableCell className="text-sm">
-                            <button
-                              onClick={() => !notif.read && markAsReadMutation.mutate(notif.id)}
-                              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                                notif.read
-                                  ? 'bg-gray-100 text-gray-600'
-                                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer'
-                              }`}
-                            >
-                              {notif.read ? '✓ Okundu' : 'Okunmadı'}
-                            </button>
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            <Badge variant="outline">
-                              {notif.notification_type === 'payment_reminder' ? '💰' : 
-                               notif.notification_type === 'lesson_cancellation' ? '📅' : 
-                               notif.notification_type === 'announcement' ? '📢' : '🔔'}
-                              {' ' + notif.notification_type}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-sm font-medium">{notif.channel.toUpperCase()}</TableCell>
-                          <TableCell className="text-sm">{notif.phone_number}</TableCell>
-                          <TableCell className="text-sm max-w-xs truncate">{notif.message}</TableCell>
-                          <TableCell>
-                            <Badge className={
-                              notif.status === 'sent' ? 'bg-green-100 text-green-700' :
-                              notif.status === 'pending' ? 'bg-amber-100 text-amber-700' :
-                              'bg-red-100 text-red-700'
-                            }>
-                              {notif.status === 'sent' ? '✓' : notif.status === 'pending' ? '⏳' : '✕'}
-                              {' ' + notif.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {notif.sent_at ? new Date(notif.sent_at).toLocaleDateString('tr-TR') : '-'}
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => {
-                                if (window.confirm('Sil?')) {
-                                  deleteNotificationMutation.mutate(notif.id);
-                                }
-                              }}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </TableCell>
-                          </TableRow>
-                          ))
-                          )}
-                          </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Read notifications */}
+          {notifications.filter(n => n.read).length > 0 && (
+            <>
+              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider pt-4 pb-1">Previously Read</h3>
+              {notifications.filter(n => n.read).slice(0, 20).map(notif => {
+                const tc = typeConfig[notif.notification_type] || typeConfig.message;
+                return (
+                  <div key={notif.id} className="bg-slate-50/50 border rounded-xl p-3 opacity-70 hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">{tc.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm truncate">{notif.message}</p>
+                        <span className="text-xs text-muted-foreground">
+                          {notif.sent_at ? new Date(notif.sent_at).toLocaleDateString() : ''}
+                        </span>
+                      </div>
+                      <button onClick={() => deleteMutation.mutate(notif.id)} className="p-1 text-muted-foreground hover:text-destructive">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
         </TabsContent>
 
-        <TabsContent value="templates" className="space-y-6">
-          {/* Templates Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Bildirim Templates</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Tür</TableHead>
-                      <TableHead>Kanal</TableHead>
-                      <TableHead>Başlık</TableHead>
-                      <TableHead>Template Metni</TableHead>
-                      <TableHead>Dil</TableHead>
-                      <TableHead>Durumu</TableHead>
-                      <TableHead>İşlemler</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {templates.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                          Template bulunmuyor
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      templates.map(tpl => (
-                        <TableRow key={tpl.id}>
-                          <TableCell className="text-sm">
-                            <Badge variant="outline">{tpl.template_type}</Badge>
-                          </TableCell>
-                          <TableCell className="text-sm font-medium">{tpl.channel.toUpperCase()}</TableCell>
-                          <TableCell className="text-sm font-medium">{tpl.title}</TableCell>
-                          <TableCell className="text-sm max-w-xs truncate">{tpl.template_text}</TableCell>
-                          <TableCell className="text-sm">{tpl.language === 'tr' ? '🇹🇷 Türkçe' : '🇬🇧 English'}</TableCell>
-                          <TableCell>
-                            <Badge className={tpl.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}>
-                              {tpl.is_active ? '✓ Aktif' : '✕ Pasif'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => {
-                                if (window.confirm('Sil?')) {
-                                  deleteTemplateMutation.mutate(tpl.id);
-                                }
-                              }}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="sent" className="mt-4 space-y-2">
+          {notifications.filter(n => n.sent_by === user?.full_name).length === 0 ? (
+            <div className="text-center py-12">
+              <Send className="w-12 h-12 mx-auto mb-3 text-muted-foreground/20" />
+              <p className="text-muted-foreground">No sent notifications</p>
+            </div>
+          ) : (
+            notifications.filter(n => n.sent_by === user?.full_name).map(notif => {
+              const tc = typeConfig[notif.notification_type] || typeConfig.message;
+              return (
+                <div key={notif.id} className="bg-white border rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="text-lg">{tc.icon}</span>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{notif.title}</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">{notif.message}</p>
+                      <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                        <span>To: {notif.recipient_email}</span>
+                        <span>•</span>
+                        <span>{notif.read ? '✓ Read' : '○ Unread'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </TabsContent>
       </Tabs>
 
-      {/* Send Notification Dialog */}
-       <Dialog open={showSendForm} onOpenChange={setShowSendForm}>
-         <DialogContent className="max-w-lg">
-           <DialogHeader>
-             <DialogTitle>Bildirim Gönder</DialogTitle>
-           </DialogHeader>
-           <div className="space-y-4 mt-4">
-             <div className="space-y-2">
-               <Label>Bildirim Türü</Label>
-               <Select value={sendForm.notification_type} onValueChange={(v) => setSendForm({ ...sendForm, notification_type: v })}>
-                 <SelectTrigger><SelectValue /></SelectTrigger>
-                 <SelectContent>
-                   <SelectItem value="announcement">📢 Duyuru</SelectItem>
-                   <SelectItem value="lesson_cancellation">📅 Ders İptali</SelectItem>
-                   <SelectItem value="payment_reminder">💰 Ödeme Hatırlatması</SelectItem>
-                   <SelectItem value="trial_scheduled">🎯 Trial Planlandı</SelectItem>
-                   <SelectItem value="message">💬 Mesaj</SelectItem>
-                 </SelectContent>
-               </Select>
-             </div>
+      {/* Compose Notification Dialog */}
+      <ComposeNotificationDialog
+        open={showComposeDialog}
+        onClose={() => setShowComposeDialog(false)}
+        courses={courses}
+        students={students}
+        user={user}
+        onSent={() => {
+          queryClient.invalidateQueries({ queryKey: ['notifications'] });
+          setShowComposeDialog(false);
+        }}
+      />
+    </div>
+  );
+}
 
-             <div className="space-y-2">
-               <Label>Alıcı Tipi</Label>
-               <Select value={sendForm.recipient_type} onValueChange={(v) => setSendForm({ ...sendForm, recipient_type: v })}>
-                 <SelectTrigger><SelectValue /></SelectTrigger>
-                 <SelectContent>
-                   <SelectItem value="student">Öğrenci</SelectItem>
-                   <SelectItem value="staff">Personel</SelectItem>
-                   <SelectItem value="both">Her İkisi</SelectItem>
-                 </SelectContent>
-               </Select>
-             </div>
+// ─── Compose Dialog ─────────────────────────────────────
+function ComposeNotificationDialog({ open, onClose, courses, students, user, onSent }) {
+  const [title, setTitle] = useState('');
+  const [message, setMessage] = useState('');
+  const [icon, setIcon] = useState('📢');
+  const [targetMode, setTargetMode] = useState('all'); // all | courses | students | both
+  const [selectedCourses, setSelectedCourses] = useState([]);
+  const [selectedStudents, setSelectedStudents] = useState([]);
+  const [studentSearch, setStudentSearch] = useState('');
+  const [sending, setSending] = useState(false);
 
-             <div className="space-y-2">
-               <Label>Kanallar (Birden fazla seçebilirsiniz)</Label>
-               <div className="flex flex-wrap gap-2">
-                 {[
-                   { id: 'whatsapp', label: '💬 WhatsApp' },
-                   { id: 'sms', label: '📱 SMS' },
-                   { id: 'chat', label: '💭 Sistem Chat' },
-                   { id: 'email', label: '✉️ E-mail' }
-                 ].map(ch => (
-                   <button
-                     key={ch.id}
-                     onClick={() => {
-                       const updated = sendForm.channels.includes(ch.id)
-                         ? sendForm.channels.filter(c => c !== ch.id)
-                         : [...sendForm.channels, ch.id];
-                       setSendForm({ ...sendForm, channels: updated });
-                     }}
-                     className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                       sendForm.channels.includes(ch.id)
-                         ? 'bg-primary text-white'
-                         : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                     }`}
-                   >
-                     {ch.label}
-                   </button>
-                 ))}
-               </div>
-             </div>
+  const filteredStudents = students.filter(s =>
+    s.full_name?.toLowerCase().includes(studentSearch.toLowerCase()) ||
+    s.email?.toLowerCase().includes(studentSearch.toLowerCase())
+  );
 
-             {(sendForm.channels.includes('whatsapp') || sendForm.channels.includes('sms')) && (
-               <div className="space-y-2">
-                 <Label>Telefon Numarası</Label>
-                 <Input
-                   placeholder="+90..."
-                   value={sendForm.phone_number}
-                   onChange={(e) => setSendForm({ ...sendForm, phone_number: e.target.value })}
-                 />
-               </div>
-             )}
+  const toggleCourse = (id) => setSelectedCourses(p => p.includes(id) ? p.filter(c => c !== id) : [...p, id]);
+  const toggleStudent = (id) => setSelectedStudents(p => p.includes(id) ? p.filter(s => s !== id) : [...p, id]);
 
-             {sendForm.channels.includes('email') && (
-               <div className="space-y-2">
-                 <Label>E-mail Adresi</Label>
-                 <Input
-                   type="email"
-                   placeholder="ornek@email.com"
-                   value={sendForm.email}
-                   onChange={(e) => setSendForm({ ...sendForm, email: e.target.value })}
-                 />
-               </div>
-             )}
+  const getRecipientEmails = () => {
+    const emails = new Set();
+    if (targetMode === 'all') {
+      students.forEach(s => { if (s.email) emails.add(s.email); });
+    }
+    if (targetMode === 'courses' || targetMode === 'both') {
+      selectedCourses.forEach(cid => {
+        const course = courses.find(c => c.id === cid);
+        course?.enrolled_students?.forEach(sid => {
+          const s = students.find(st => st.id === sid);
+          if (s?.email) emails.add(s.email);
+        });
+      });
+    }
+    if (targetMode === 'students' || targetMode === 'both') {
+      selectedStudents.forEach(sid => {
+        const s = students.find(st => st.id === sid);
+        if (s?.email) emails.add(s.email);
+      });
+    }
+    return [...emails];
+  };
 
-             <div className="space-y-2">
-               <Label>Mesaj</Label>
-               <textarea
-                 className="w-full border rounded-md p-2 text-sm"
-                 rows="4"
-                 value={sendForm.message}
-                 onChange={(e) => setSendForm({ ...sendForm, message: e.target.value })}
-                 placeholder="Göndermek istediğiniz mesajı yazın..."
-               />
-               <p className="text-xs text-muted-foreground">Karakterler: {sendForm.message.length}/160 (SMS)</p>
-             </div>
+  const handleSend = async () => {
+    if (!title || !message) return;
+    const emails = getRecipientEmails();
+    if (emails.length === 0) return alert('No recipients selected!');
 
-             <div className="flex justify-end gap-3 pt-2">
-               <Button variant="outline" onClick={() => setShowSendForm(false)}>İptal</Button>
-               <Button onClick={handleSendNotification}>Gönder</Button>
-             </div>
-           </div>
-         </DialogContent>
-       </Dialog>
+    setSending(true);
+    try {
+      await NotificationService.sendCustom({
+        title,
+        message,
+        icon,
+        recipientEmails: emails,
+        sentBy: user?.full_name || 'Admin',
+      });
+      alert(`✅ Notification sent to ${emails.length} recipient(s)!`);
+      setTitle(''); setMessage(''); setSelectedCourses([]); setSelectedStudents([]);
+      onSent();
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
+    setSending(false);
+  };
 
-      {/* Template Create Dialog */}
-       <Dialog open={showTemplateForm} onOpenChange={setShowTemplateForm}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Yeni Template Oluştur</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label>Template Türü</Label>
-              <Select value={templateForm.template_type} onValueChange={(v) => setTemplateForm({ ...templateForm, template_type: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="payment_reminder">Ödeme Hatırlatması</SelectItem>
-                  <SelectItem value="lesson_cancellation">Ders İptali</SelectItem>
-                  <SelectItem value="announcement">Duyuru</SelectItem>
-                  <SelectItem value="trial_scheduled">Trial Planlandı</SelectItem>
-                  <SelectItem value="custom">Özel</SelectItem>
-                </SelectContent>
-              </Select>
+  const recipientCount = getRecipientEmails().length;
+
+  const ICONS = ['📢', '⚠️', '🎉', '📚', '💰', '🔔', '⏰', '🎓', '✅', '❌'];
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Megaphone className="w-5 h-5 text-primary" />
+            Send Notification
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-5 mt-2">
+          {/* Icon + Title */}
+          <div className="flex gap-3">
+            <div>
+              <Label className="text-xs">Icon</Label>
+              <div className="flex gap-1 mt-1 flex-wrap max-w-[160px]">
+                {ICONS.map(i => (
+                  <button key={i} onClick={() => setIcon(i)} className={`w-8 h-8 rounded-lg text-lg flex items-center justify-center ${icon === i ? 'bg-primary/20 ring-2 ring-primary' : 'hover:bg-slate-100'}`}>
+                    {i}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Kanal</Label>
-              <Select value={templateForm.channel} onValueChange={(v) => setTemplateForm({ ...templateForm, channel: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                  <SelectItem value="sms">SMS</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Başlık</Label>
-              <Input 
-                value={templateForm.title} 
-                onChange={(e) => setTemplateForm({ ...templateForm, title: e.target.value })}
-                placeholder="Örn: Ödeme Hatırlatması"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Template Metni</Label>
-              <textarea 
-                className="w-full border rounded-md p-2 text-sm"
-                rows="4"
-                value={templateForm.template_text}
-                onChange={(e) => setTemplateForm({ ...templateForm, template_text: e.target.value })}
-                placeholder="Örn: Merhaba {{student_name}}, faturanız £{{amount}} vade tarihi {{due_date}}"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Variables: {'{{student_name}}, {{amount}}, {{date}}, {{due_date}}, {{course_name}}, {{lesson_date}}'} 
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label>Dil</Label>
-              <Select value={templateForm.language} onValueChange={(v) => setTemplateForm({ ...templateForm, language: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="tr">Türkçe</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end gap-3 pt-2">
-              <Button variant="outline" onClick={() => setShowTemplateForm(false)}>İptal</Button>
-              <Button onClick={handleCreateTemplate} disabled={createTemplateMutation.isPending}>
-                Template Oluştur
-              </Button>
+            <div className="flex-1">
+              <Label className="text-xs">Title *</Label>
+              <Input className="mt-1" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Important Announcement" />
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+
+          {/* Message */}
+          <div>
+            <Label className="text-xs">Message *</Label>
+            <textarea className="w-full border rounded-lg px-3 py-2 text-sm mt-1" rows={3} value={message} onChange={e => setMessage(e.target.value)} placeholder="Write your notification message..." />
+          </div>
+
+          {/* Target Selection */}
+          <div className="border rounded-xl p-4 bg-slate-50">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Recipients</Label>
+            <div className="grid grid-cols-4 gap-2 mt-3 mb-4">
+              {[
+                { v: 'all', l: '🌐 All Students' },
+                { v: 'courses', l: '📚 By Course' },
+                { v: 'students', l: '👤 Students' },
+                { v: 'both', l: '📚+👤 Both' },
+              ].map(m => (
+                <button key={m.v} onClick={() => setTargetMode(m.v)} className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${targetMode === m.v ? 'bg-primary text-white border-primary' : 'bg-white border-border hover:border-primary/50'}`}>
+                  {m.l}
+                </button>
+              ))}
+            </div>
+
+            {/* Course Selection */}
+            {(targetMode === 'courses' || targetMode === 'both') && (
+              <div className="mb-4">
+                <Label className="text-xs mb-2 block">Select Courses</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {courses.map(c => (
+                    <button key={c.id} onClick={() => toggleCourse(c.id)} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs text-left transition-all ${selectedCourses.includes(c.id) ? 'bg-blue-50 border-blue-300' : 'bg-white border-border hover:border-blue-200'}`}>
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center ${selectedCourses.includes(c.id) ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
+                        {selectedCourses.includes(c.id) && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <span className="truncate font-medium">{c.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Student Selection */}
+            {(targetMode === 'students' || targetMode === 'both') && (
+              <div>
+                <Label className="text-xs mb-2 block">Select Students</Label>
+                <div className="relative mb-2">
+                  <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-muted-foreground" />
+                  <input className="w-full border rounded-lg pl-8 pr-3 py-1.5 text-xs" value={studentSearch} onChange={e => setStudentSearch(e.target.value)} placeholder="Search students..." />
+                </div>
+                {selectedStudents.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {selectedStudents.map(sid => {
+                      const s = students.find(st => st.id === sid);
+                      return (
+                        <span key={sid} className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-xs">
+                          {s?.full_name || sid}
+                          <button onClick={() => toggleStudent(sid)}><X className="w-3 h-3" /></button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+                <div className="max-h-32 overflow-y-auto border rounded-lg bg-white">
+                  {filteredStudents.map(s => (
+                    <button key={s.id} onClick={() => toggleStudent(s.id)} className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-slate-50 border-b last:border-0 ${selectedStudents.includes(s.id) ? 'bg-emerald-50' : ''}`}>
+                      <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${selectedStudents.includes(s.id) ? 'bg-emerald-600 border-emerald-600' : 'border-gray-300'}`}>
+                        {selectedStudents.includes(s.id) && <Check className="w-2.5 h-2.5 text-white" />}
+                      </div>
+                      <span className="font-medium">{s.full_name}</span>
+                      <span className="text-muted-foreground ml-auto">{s.email}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t">
+              <Users className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">{recipientCount} recipient(s) selected</span>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={onClose} disabled={sending}>Cancel</Button>
+            <Button onClick={handleSend} disabled={sending || !title || !message || recipientCount === 0}>
+              <Send className="w-4 h-4 mr-2" />
+              {sending ? 'Sending...' : `Send to ${recipientCount} recipient(s)`}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
