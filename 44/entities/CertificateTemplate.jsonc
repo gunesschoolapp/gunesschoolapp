@@ -1,0 +1,72 @@
+{
+  "name": "CertificateTemplate",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "\u015eablon ad\u0131"
+    },
+    "school_name": {
+      "type": "string",
+      "description": "Okul / kurum ad\u0131"
+    },
+    "logo_url": {
+      "type": "string",
+      "description": "Logo URL"
+    },
+    "signature1_name": {
+      "type": "string",
+      "description": "1. imza sahibinin ad\u0131 (\u00f6r: M\u00fcd\u00fcr)"
+    },
+    "signature1_title": {
+      "type": "string",
+      "description": "1. imza sahibinin unvan\u0131"
+    },
+    "signature1_url": {
+      "type": "string",
+      "description": "1. imza g\u00f6rseli URL"
+    },
+    "signature2_name": {
+      "type": "string",
+      "description": "2. imza sahibinin ad\u0131"
+    },
+    "signature2_title": {
+      "type": "string",
+      "description": "2. imza sahibinin unvan\u0131"
+    },
+    "signature2_url": {
+      "type": "string",
+      "description": "2. imza g\u00f6rseli URL"
+    },
+    "template_style": {
+      "type": "string",
+      "enum": [
+        "marble_gold",
+        "classic_blue",
+        "elegant_gold",
+        "modern_dark"
+      ],
+      "default": "marble_gold",
+      "description": "\u015eablon stili"
+    },
+    "certificate_title": {
+      "type": "string",
+      "default": "BA\u015eARI BELGES\u0130",
+      "description": "Sertifika ba\u015fl\u0131\u011f\u0131"
+    },
+    "subtitle_text": {
+      "type": "string",
+      "default": "Bu belge, a\u015fa\u011f\u0131da ad\u0131 yaz\u0131l\u0131 ki\u015finin kursu ba\u015far\u0131yla tamamlad\u0131\u011f\u0131n\u0131 onaylar.",
+      "description": "Alt ba\u015fl\u0131k metni"
+    },
+    "is_default": {
+      "type": "boolean",
+      "default": false,
+      "description": "Varsay\u0131lan \u015fablon"
+    }
+  },
+  "required": [
+    "name",
+    "school_name"
+  ]
+}

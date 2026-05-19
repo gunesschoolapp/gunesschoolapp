@@ -1,0 +1,86 @@
+{
+  "name": "TeacherExpense",
+  "type": "object",
+  "properties": {
+    "teacher_id": {
+      "type": "string",
+      "description": "\u00d6\u011fretmen ID (varsa, di\u011fer payla\u015f\u0131lan giderler i\u00e7in)"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "rent",
+        "utilities",
+        "internet",
+        "maintenance",
+        "supplies",
+        "equipment",
+        "insurance",
+        "marketing",
+        "other"
+      ],
+      "description": "Gider kategorisi"
+    },
+    "description": {
+      "type": "string",
+      "description": "Gider a\u00e7\u0131klamas\u0131"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Tutar (\u00a3)"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Gider tarihi"
+    },
+    "period": {
+      "type": "string",
+      "description": "Ay\u0131 d\u00f6nem (Ocak 2026)"
+    },
+    "split_method": {
+      "type": "string",
+      "enum": [
+        "equal",
+        "per_teacher",
+        "per_lesson",
+        "custom"
+      ],
+      "default": "equal",
+      "description": "Da\u011f\u0131t\u0131m y\u00f6ntemi"
+    },
+    "allocated_to_teacher": {
+      "type": "number",
+      "description": "Bu \u00f6\u011fretmene payla\u015ft\u0131r\u0131lan tutar (\u00a3)"
+    },
+    "paid": {
+      "type": "boolean",
+      "default": false,
+      "description": "\u00d6dendi mi?"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "bank_transfer",
+        "cash",
+        "credit_card"
+      ],
+      "description": "\u00d6deme y\u00f6ntemi"
+    },
+    "receipt_url": {
+      "type": "string",
+      "description": "Makbuz belge URL"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notlar"
+    }
+  },
+  "required": [
+    "category",
+    "description",
+    "amount",
+    "date",
+    "period"
+  ]
+}

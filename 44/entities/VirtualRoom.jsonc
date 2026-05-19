@@ -1,0 +1,48 @@
+{
+  "name": "VirtualRoom",
+  "type": "object",
+  "properties": {
+    "room_id": {
+      "type": "string",
+      "description": "Jitsi oda ID (benzersiz)"
+    },
+    "course_id": {
+      "type": "string",
+      "description": "\u0130li\u015fkili kurs ID"
+    },
+    "course_name": {
+      "type": "string",
+      "description": "Kurs ad\u0131 (h\u0131zl\u0131 eri\u015fim)"
+    },
+    "teacher_name": {
+      "type": "string",
+      "description": "\u00d6\u011fretmen ad\u0131"
+    },
+    "teacher_email": {
+      "type": "string",
+      "description": "\u00d6\u011fretmen email"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "ended"
+      ],
+      "default": "active",
+      "description": "Oda durumu"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Ba\u015flang\u0131\u00e7 zaman\u0131"
+    },
+    "ended_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Biti\u015f zaman\u0131"
+    }
+  },
+  "required": [
+    "room_id"
+  ]
+}

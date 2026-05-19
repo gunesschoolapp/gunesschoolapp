@@ -1,0 +1,69 @@
+{
+  "name": "Payment",
+  "type": "object",
+  "properties": {
+    "student_id": {
+      "type": "string",
+      "description": "\u00d6\u011frenci ID"
+    },
+    "course_id": {
+      "type": "string",
+      "description": "Kurs ID"
+    },
+    "amount": {
+      "type": "number",
+      "description": "\u00d6deme tutar\u0131 (\u00a3)"
+    },
+    "payment_date": {
+      "type": "string",
+      "format": "date",
+      "description": "\u00d6deme tarihi"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Vade tarihi"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "paid",
+        "pending",
+        "overdue",
+        "cancelled"
+      ],
+      "default": "pending",
+      "description": "\u00d6deme durumu"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "cash",
+        "credit_card",
+        "bank_transfer",
+        "other"
+      ],
+      "description": "\u00d6deme y\u00f6ntemi"
+    },
+    "collected_by": {
+      "type": "string",
+      "description": "\u00d6demeyi teslim alan ki\u015fi (personel ad\u0131)"
+    },
+    "installment_number": {
+      "type": "number",
+      "description": "Taksit numaras\u0131"
+    },
+    "total_installments": {
+      "type": "number",
+      "description": "Toplam taksit say\u0131s\u0131"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notlar"
+    }
+  },
+  "required": [
+    "student_id",
+    "amount"
+  ]
+}

@@ -1,0 +1,154 @@
+{
+  "name": "Invoice",
+  "type": "object",
+  "properties": {
+    "invoice_number": {
+      "type": "string",
+      "description": "Unique invoice number (e.g., INV-2026-001)"
+    },
+    "invoice_type": {
+      "type": "string",
+      "enum": [
+        "student",
+        "company"
+      ],
+      "default": "student",
+      "description": "Invoice type - for student or company"
+    },
+    "student_id": {
+      "type": "string",
+      "description": "Student ID (required for student invoices)"
+    },
+    "company_name": {
+      "type": "string",
+      "description": "Company name (required for company invoices)"
+    },
+    "company_tax_id": {
+      "type": "string",
+      "description": "Company tax/VAT ID"
+    },
+    "company_email": {
+      "type": "string",
+      "description": "Company email address"
+    },
+    "company_address": {
+      "type": "string",
+      "description": "Company address"
+    },
+    "course_id": {
+      "type": "string",
+      "description": "Course ID"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Invoice amount (\u00a3)"
+    },
+    "issue_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Invoice issue date"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Payment due date"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "sent",
+        "paid",
+        "pending",
+        "overdue",
+        "cancelled"
+      ],
+      "default": "draft",
+      "description": "Invoice status"
+    },
+    "payment_status": {
+      "type": "string",
+      "enum": [
+        "unpaid",
+        "partially_paid",
+        "paid"
+      ],
+      "default": "unpaid",
+      "description": "Payment status"
+    },
+    "amount_paid": {
+      "type": "number",
+      "default": 0,
+      "description": "Amount already paid (\u00a3)"
+    },
+    "installment_plan": {
+      "type": "array",
+      "description": "Taksit plan\u0131 \u2014 her taksit i\u00e7in ayr\u0131 kay\u0131t",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "installment_no": {
+            "type": "number",
+            "description": "Taksit s\u0131ras\u0131 (1, 2, 3...)"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Bu taksitin tutar\u0131 (\u00a3)"
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date",
+            "description": "\u00d6deme vadesi"
+          },
+          "paid": {
+            "type": "boolean",
+            "default": false
+          },
+          "paid_date": {
+            "type": "string",
+            "format": "date",
+            "description": "Ger\u00e7ek \u00f6deme tarihi"
+          },
+          "payment_method": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "credit_card",
+              "bank_transfer",
+              "other"
+            ]
+          },
+          "collected_by": {
+            "type": "string",
+            "description": "\u00d6demeyi teslim alan ki\u015fi (personel ad\u0131)"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "description": "Internal notes"
+    },
+    "template": {
+      "type": "string",
+      "description": "Invoice template type (classic_blue, modern, simple)"
+    },
+    "sent_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Date invoice was sent"
+    }
+  },
+  "required": [
+    "invoice_number",
+    "amount",
+    "issue_date",
+    "due_date"
+  ]
+}

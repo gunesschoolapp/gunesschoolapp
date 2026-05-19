@@ -1,0 +1,36 @@
+{
+  "name": "LeadPipelineStage",
+  "type": "object",
+  "properties": {
+    "stage_name": {
+      "type": "string",
+      "description": "Kanban kolon ad\u0131 (\u00f6rn: Yeni Lead, \u0130leti\u015fim Yap\u0131ld\u0131, vb.)"
+    },
+    "order": {
+      "type": "number",
+      "description": "Kolon s\u0131ras\u0131 (0, 1, 2, ...)"
+    },
+    "associated_lead_statuses": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Bu kolona ait Lead stat\u00fcs\u00fc de\u011ferleri (\u00f6rn: ['new', 'contacted'])"
+    },
+    "color": {
+      "type": "string",
+      "default": "bg-blue-100 text-blue-700",
+      "description": "Kolon rengi ve badge stili"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Kolon aktif mi?"
+    }
+  },
+  "required": [
+    "stage_name",
+    "order",
+    "associated_lead_statuses"
+  ]
+}

@@ -1,0 +1,273 @@
+{
+  "name": "PermissionSet",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "\u0130zin seti ad\u0131 (\u00f6rn: \u00d6\u011fretmen, Resepsiyon, Pazarlama)"
+    },
+    "description": {
+      "type": "string",
+      "description": "A\u00e7\u0131klama"
+    },
+    "is_system": {
+      "type": "boolean",
+      "default": false,
+      "description": "Sistem varsay\u0131lan\u0131 m\u0131? (silinemez)"
+    },
+    "color": {
+      "type": "string",
+      "description": "Renk kodu (\u00f6rn: blue, green, red)"
+    },
+    "permissions": {
+      "type": "object",
+      "description": "Mod\u00fcl bazl\u0131 izinler \u2014 her mod\u00fcl i\u00e7in view/create/edit/delete boolean de\u011ferleri",
+      "properties": {
+        "dashboard": {
+          "type": "object",
+          "properties": {
+            "view": {
+              "type": "boolean"
+            }
+          }
+        },
+        "leads": {
+          "type": "object",
+          "properties": {
+            "view": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            },
+            "delete": {
+              "type": "boolean"
+            }
+          }
+        },
+        "students": {
+          "type": "object",
+          "properties": {
+            "view": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            },
+            "delete": {
+              "type": "boolean"
+            }
+          }
+        },
+        "courses": {
+          "type": "object",
+          "properties": {
+            "view": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            },
+            "delete": {
+              "type": "boolean"
+            }
+          }
+        },
+        "schedule": {
+          "type": "object",
+          "properties": {
+            "view": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            }
+          }
+        },
+        "teachers": {
+          "type": "object",
+          "properties": {
+            "view": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            },
+            "delete": {
+              "type": "boolean"
+            }
+          }
+        },
+        "tasks": {
+          "type": "object",
+          "properties": {
+            "view": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            },
+            "delete": {
+              "type": "boolean"
+            }
+          }
+        },
+        "invoices": {
+          "type": "object",
+          "properties": {
+            "view": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            },
+            "delete": {
+              "type": "boolean"
+            }
+          }
+        },
+        "finance": {
+          "type": "object",
+          "properties": {
+            "view": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            }
+          }
+        },
+        "payroll": {
+          "type": "object",
+          "properties": {
+            "view": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            }
+          }
+        },
+        "expenses": {
+          "type": "object",
+          "properties": {
+            "view": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            },
+            "delete": {
+              "type": "boolean"
+            }
+          }
+        },
+        "reports": {
+          "type": "object",
+          "properties": {
+            "view": {
+              "type": "boolean"
+            }
+          }
+        },
+        "emails": {
+          "type": "object",
+          "properties": {
+            "view": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            }
+          }
+        },
+        "settings": {
+          "type": "object",
+          "properties": {
+            "view": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            }
+          }
+        },
+        "personnel": {
+          "type": "object",
+          "properties": {
+            "view": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            },
+            "delete": {
+              "type": "boolean"
+            }
+          }
+        },
+        "classrooms": {
+          "type": "object",
+          "properties": {
+            "view": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            },
+            "edit": {
+              "type": "boolean"
+            }
+          }
+        },
+        "notifications": {
+          "type": "object",
+          "properties": {
+            "view": {
+              "type": "boolean"
+            },
+            "create": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "name": "Lesson",
+  "type": "object",
+  "properties": {
+    "course_id": {
+      "type": "string",
+      "description": "\u0130li\u015fkili kurs"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Ders tarihi"
+    },
+    "start_time": {
+      "type": "string",
+      "description": "Ba\u015flang\u0131\u00e7 saati (\u00f6r: 14:00)"
+    },
+    "end_time": {
+      "type": "string",
+      "description": "Biti\u015f saati (\u00f6r: 15:30)"
+    },
+    "teacher": {
+      "type": "string",
+      "description": "\u00d6\u011fretmen ad\u0131"
+    },
+    "topic": {
+      "type": "string",
+      "description": "Ders konusu"
+    },
+    "room": {
+      "type": "string",
+      "description": "S\u0131n\u0131f/Oda"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "scheduled",
+        "completed",
+        "cancelled"
+      ],
+      "default": "scheduled",
+      "description": "Ders durumu"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Ders notlar\u0131"
+    }
+  },
+  "required": [
+    "course_id",
+    "date"
+  ]
+}

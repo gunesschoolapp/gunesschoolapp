@@ -1,0 +1,89 @@
+{
+  "name": "WebsiteForm",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Form ad\u0131"
+    },
+    "slug": {
+      "type": "string",
+      "description": "URL slug (\u00f6zel karakter yok)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Form a\u00e7\u0131klamas\u0131"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "lead",
+        "enrollment",
+        "contact"
+      ],
+      "default": "lead",
+      "description": "Form t\u00fcr\u00fc"
+    },
+    "fields": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "email",
+              "phone",
+              "date",
+              "select",
+              "textarea"
+            ]
+          },
+          "required": {
+            "type": "boolean",
+            "default": false
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Select tipi i\u00e7in se\u00e7enekler"
+          }
+        }
+      },
+      "description": "Form alanlar\u0131"
+    },
+    "submit_button_text": {
+      "type": "string",
+      "default": "G\u00f6nder"
+    },
+    "submit_message": {
+      "type": "string",
+      "default": "Te\u015fekk\u00fcr ederiz! K\u0131sa s\u00fcre i\u00e7inde sizinle ileti\u015fime ge\u00e7ece\u011fiz."
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "created_by": {
+      "type": "string",
+      "description": "Admin email"
+    }
+  },
+  "required": [
+    "name",
+    "slug",
+    "type"
+  ]
+}

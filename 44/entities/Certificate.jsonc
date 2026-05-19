@@ -1,0 +1,28 @@
+{
+  "name": "Certificate",
+  "type": "object",
+  "properties": {
+    "student_id": {
+      "type": "string",
+      "description": "\u00d6\u011frenci ID"
+    },
+    "course_id": {
+      "type": "string",
+      "description": "Kurs ID"
+    },
+    "completion_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Tamamlanma tarihi"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notlar"
+    }
+  },
+  "required": [
+    "student_id",
+    "course_id",
+    "completion_date"
+  ]
+}

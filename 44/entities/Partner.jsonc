@@ -1,0 +1,32 @@
+{
+  "name": "Partner",
+  "type": "object",
+  "properties": {
+    "full_name": {
+      "type": "string",
+      "description": "Ad soyad"
+    },
+    "email": {
+      "type": "string",
+      "description": "E-posta"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefon"
+    },
+    "role_title": {
+      "type": "string",
+      "description": "Unvan (\u00f6rn: Kurucu Ortak, \u0130dari Ortak)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "full_name"
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "name": "TeamChatMessage",
+  "type": "object",
+  "properties": {
+    "room_id": {
+      "type": "string",
+      "description": "Parent room ID"
+    },
+    "sender_email": {
+      "type": "string"
+    },
+    "sender_name": {
+      "type": "string"
+    },
+    "sender_type": {
+      "type": "string",
+      "enum": [
+        "staff",
+        "student"
+      ],
+      "default": "staff"
+    },
+    "content": {
+      "type": "string",
+      "description": "Message text"
+    },
+    "sent_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "read_by": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Emails that have read this message",
+      "default": []
+    }
+  },
+  "required": [
+    "room_id",
+    "content",
+    "sender_email"
+  ]
+}

@@ -1,0 +1,135 @@
+{
+  "name": "Staff",
+  "type": "object",
+  "properties": {
+    "full_name": {
+      "type": "string",
+      "description": "Ad soyad"
+    },
+    "email": {
+      "type": "string",
+      "description": "E-posta"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefon"
+    },
+    "date_of_birth": {
+      "type": "string",
+      "format": "date",
+      "description": "Do\u011fum tarihi"
+    },
+    "nationality": {
+      "type": "string",
+      "description": "Uyruk"
+    },
+    "passport_number": {
+      "type": "string",
+      "description": "Pasaport / TC Kimlik No"
+    },
+    "passport_expiry": {
+      "type": "string",
+      "format": "date",
+      "description": "Pasaport ge\u00e7erlilik tarihi"
+    },
+    "address": {
+      "type": "string",
+      "description": "Adres"
+    },
+    "roles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Ki\u015finin \u00fcstlendi\u011fi g\u00f6revler (\u00f6rn: ['teacher', 'sales', 'reception'])"
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Eri\u015febilece\u011fi sayfalar",
+      "default": []
+    },
+    "branch": {
+      "type": "string",
+      "enum": [
+        "english",
+        "turkish",
+        "ielts",
+        "kids",
+        "other"
+      ],
+      "description": "Bran\u015f (\u00f6\u011fretmenler i\u00e7in)"
+    },
+    "specialization": {
+      "type": "string",
+      "description": "Uzmanl\u0131k alan\u0131"
+    },
+    "salary_type": {
+      "type": "string",
+      "enum": [
+        "hourly",
+        "fixed",
+        "per_lesson"
+      ],
+      "default": "fixed"
+    },
+    "fixed_salary": {
+      "type": "number",
+      "description": "Ayl\u0131k sabit maa\u015f (\u00a3)"
+    },
+    "group_rate": {
+      "type": "number",
+      "description": "Grup dersi saatlik \u00fccreti (\u00a3)"
+    },
+    "individual_rate": {
+      "type": "number",
+      "description": "Birebir ders saatlik \u00fccreti (\u00a3)"
+    },
+    "online_rate": {
+      "type": "number",
+      "description": "Online ders saatlik \u00fccreti (\u00a3)"
+    },
+    "trial_rate": {
+      "type": "number",
+      "description": "Trial ders \u00fccreti (\u00a3)"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "\u0130\u015fe ba\u015flama tarihi"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive"
+      ],
+      "default": "active"
+    },
+    "bio": {
+      "type": "string",
+      "description": "K\u0131sa biyografi"
+    },
+    "photo_url": {
+      "type": "string",
+      "description": "Foto\u011fraf URL"
+    },
+    "emergency_contact_name": {
+      "type": "string"
+    },
+    "emergency_contact_phone": {
+      "type": "string"
+    },
+    "emergency_contact_relation": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "full_name"
+  ]
+}

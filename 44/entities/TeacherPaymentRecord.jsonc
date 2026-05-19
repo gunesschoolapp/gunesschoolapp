@@ -1,0 +1,55 @@
+{
+  "name": "TeacherPaymentRecord",
+  "type": "object",
+  "properties": {
+    "teacher_id": {
+      "type": "string",
+      "description": "\u00d6\u011fretmen ID"
+    },
+    "salary_id": {
+      "type": "string",
+      "description": "\u0130lgili maa\u015f kayd\u0131"
+    },
+    "payment_date": {
+      "type": "string",
+      "format": "date",
+      "description": "\u00d6deme tarihi"
+    },
+    "amount": {
+      "type": "number",
+      "description": "\u00d6deme tutar\u0131 (\u00a3)"
+    },
+    "payment_type": {
+      "type": "string",
+      "enum": [
+        "statutory",
+        "cash",
+        "transfer"
+      ],
+      "description": "\u00d6deme t\u00fcr\u00fc"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "bank_transfer",
+        "cash",
+        "check"
+      ],
+      "description": "\u00d6deme y\u00f6ntemi"
+    },
+    "reference": {
+      "type": "string",
+      "description": "Referans numaras\u0131"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notlar"
+    }
+  },
+  "required": [
+    "teacher_id",
+    "payment_date",
+    "amount",
+    "payment_type"
+  ]
+}

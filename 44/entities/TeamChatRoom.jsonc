@@ -1,0 +1,52 @@
+{
+  "name": "TeamChatRoom",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Room name"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "general",
+        "student",
+        "task"
+      ],
+      "default": "general",
+      "description": "Room type"
+    },
+    "student_id": {
+      "type": "string",
+      "description": "Linked student ID (for student rooms)"
+    },
+    "student_name": {
+      "type": "string",
+      "description": "Student name for quick display"
+    },
+    "task_id": {
+      "type": "string",
+      "description": "Linked task ID (for task rooms)"
+    },
+    "participants": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of participant emails"
+    },
+    "last_message": {
+      "type": "string"
+    },
+    "last_message_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_sender_name": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

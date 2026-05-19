@@ -1,0 +1,96 @@
+{
+  "name": "Notification",
+  "type": "object",
+  "properties": {
+    "notification_type": {
+      "type": "string",
+      "enum": [
+        "payment_reminder",
+        "lesson_cancellation",
+        "announcement",
+        "trial_scheduled",
+        "custom"
+      ],
+      "description": "Bildirim t\u00fcr\u00fc"
+    },
+    "recipient_type": {
+      "type": "string",
+      "enum": [
+        "student",
+        "parent",
+        "both"
+      ],
+      "default": "student",
+      "description": "Al\u0131c\u0131 tipi"
+    },
+    "student_id": {
+      "type": "string",
+      "description": "\u00d6\u011frenci ID"
+    },
+    "parent_email": {
+      "type": "string",
+      "description": "Veli e-posta (iste\u011fe ba\u011fl\u0131)"
+    },
+    "parent_phone": {
+      "type": "string",
+      "description": "Veli telefon numaras\u0131"
+    },
+    "channel": {
+      "type": "string",
+      "enum": [
+        "sms",
+        "whatsapp",
+        "email"
+      ],
+      "description": "\u0130leti\u015fim kanal\u0131"
+    },
+    "phone_number": {
+      "type": "string",
+      "description": "Hedef telefon numaras\u0131"
+    },
+    "message": {
+      "type": "string",
+      "description": "G\u00f6nderilen mesaj"
+    },
+    "related_entity": {
+      "type": "string",
+      "description": "\u0130li\u015fkili varl\u0131k (invoice, lesson vs)"
+    },
+    "related_entity_id": {
+      "type": "string",
+      "description": "\u0130li\u015fkili varl\u0131k ID"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "sent",
+        "failed",
+        "bounced"
+      ],
+      "default": "pending",
+      "description": "G\u00f6nderim durumu"
+    },
+    "sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "G\u00f6nderilen tarih/saat"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Hata mesaj\u0131 (ba\u015far\u0131s\u0131z ise)"
+    },
+    "retry_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Yeniden deneme say\u0131s\u0131"
+    }
+  },
+  "required": [
+    "notification_type",
+    "student_id",
+    "channel",
+    "phone_number",
+    "message"
+  ]
+}

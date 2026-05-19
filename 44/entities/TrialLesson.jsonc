@@ -1,0 +1,64 @@
+{
+  "name": "TrialLesson",
+  "type": "object",
+  "properties": {
+    "lead_id": {
+      "type": "string"
+    },
+    "student_id": {
+      "type": "string"
+    },
+    "teacher_id": {
+      "type": "string"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "time": {
+      "type": "string"
+    },
+    "lesson_type": {
+      "type": "string",
+      "enum": [
+        "online",
+        "in_person"
+      ],
+      "default": "in_person"
+    },
+    "course_interest": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "scheduled",
+        "completed",
+        "cancelled",
+        "no_show"
+      ],
+      "default": "scheduled"
+    },
+    "teacher_feedback": {
+      "type": "string"
+    },
+    "student_interest_score": {
+      "type": "number",
+      "description": "1-5 aras\u0131 s\u0131cakl\u0131k puan\u0131"
+    },
+    "offer_sent": {
+      "type": "boolean",
+      "default": false
+    },
+    "converted": {
+      "type": "boolean",
+      "default": false
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "date"
+  ]
+}

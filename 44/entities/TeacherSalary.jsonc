@@ -1,0 +1,83 @@
+{
+  "name": "TeacherSalary",
+  "type": "object",
+  "properties": {
+    "teacher_id": {
+      "type": "string",
+      "description": "\u00d6\u011fretmen ID"
+    },
+    "period": {
+      "type": "string",
+      "description": "D\u00f6nem (Ocak 2026)"
+    },
+    "base_salary": {
+      "type": "number",
+      "description": "Ayl\u0131k sabit maa\u015f (\u00a3)"
+    },
+    "extra_earnings": {
+      "type": "number",
+      "default": 0,
+      "description": "Ekstra dersler toplam (\u00a3)"
+    },
+    "extra_earnings_details": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "description": "Ekstra ders detaylar\u0131"
+    },
+    "total_earned": {
+      "type": "number",
+      "description": "Toplam hak (base_salary + extra_earnings)"
+    },
+    "status_payment": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "partial",
+        "paid"
+      ],
+      "default": "pending",
+      "description": "Yasal \u00f6deme durumu"
+    },
+    "status_amount": {
+      "type": "number",
+      "default": 0,
+      "description": "Devlet sisteminden \u00f6denen (\u00a3)"
+    },
+    "cash_payment": {
+      "type": "number",
+      "default": 0,
+      "description": "Elden \u00f6denen (\u00a3)"
+    },
+    "total_paid": {
+      "type": "number",
+      "description": "Toplam \u00f6denmi\u015f (status_amount + cash_payment)"
+    },
+    "balance": {
+      "type": "number",
+      "description": "Bakiye (total_earned - total_paid)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notlar"
+    }
+  },
+  "required": [
+    "teacher_id",
+    "period",
+    "base_salary"
+  ]
+}

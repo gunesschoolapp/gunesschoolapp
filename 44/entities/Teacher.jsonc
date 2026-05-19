@@ -1,0 +1,130 @@
+{
+  "name": "Teacher",
+  "type": "object",
+  "properties": {
+    "full_name": {
+      "type": "string",
+      "description": "Ad soyad"
+    },
+    "email": {
+      "type": "string",
+      "description": "E-posta"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefon"
+    },
+    "date_of_birth": {
+      "type": "string",
+      "format": "date",
+      "description": "Do\u011fum tarihi"
+    },
+    "nationality": {
+      "type": "string",
+      "description": "Uyruk"
+    },
+    "passport_number": {
+      "type": "string",
+      "description": "Pasaport / TC Kimlik No"
+    },
+    "passport_expiry": {
+      "type": "string",
+      "format": "date",
+      "description": "Pasaport ge\u00e7erlilik tarihi"
+    },
+    "address": {
+      "type": "string",
+      "description": "Adres"
+    },
+    "emergency_contact_name": {
+      "type": "string",
+      "description": "Acil durum ki\u015fisi ad\u0131"
+    },
+    "emergency_contact_phone": {
+      "type": "string",
+      "description": "Acil durum ki\u015fisi telefonu"
+    },
+    "emergency_contact_relation": {
+      "type": "string",
+      "description": "Yak\u0131nl\u0131k derecesi (e\u015f, karde\u015f, vb.)"
+    },
+    "branch": {
+      "type": "string",
+      "enum": [
+        "english",
+        "turkish",
+        "ielts",
+        "kids"
+      ],
+      "description": "Bran\u015f"
+    },
+    "specialization": {
+      "type": "string",
+      "description": "Uzmanl\u0131k alan\u0131"
+    },
+    "courses_taught": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Verilen ders ID'leri"
+    },
+    "salary_type": {
+      "type": "string",
+      "enum": [
+        "hourly",
+        "fixed",
+        "per_lesson"
+      ],
+      "default": "hourly"
+    },
+    "fixed_salary": {
+      "type": "number",
+      "description": "Ayl\u0131k sabit maa\u015f (\u00a3)"
+    },
+    "group_rate": {
+      "type": "number",
+      "description": "Grup dersi saatlik \u00fccreti (\u00a3)"
+    },
+    "individual_rate": {
+      "type": "number",
+      "description": "Birebir ders saatlik \u00fccreti (\u00a3)"
+    },
+    "online_rate": {
+      "type": "number",
+      "description": "Online ders saatlik \u00fccreti (\u00a3)"
+    },
+    "trial_rate": {
+      "type": "number",
+      "description": "Trial ders \u00fccreti (\u00a3)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive"
+      ],
+      "default": "active"
+    },
+    "bio": {
+      "type": "string",
+      "description": "K\u0131sa biyografi"
+    },
+    "photo_url": {
+      "type": "string",
+      "description": "Foto\u011fraf URL"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "\u0130\u015fe ba\u015flama tarihi"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notlar"
+    }
+  },
+  "required": [
+    "full_name"
+  ]
+}

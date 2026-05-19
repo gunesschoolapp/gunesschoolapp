@@ -1,0 +1,91 @@
+{
+  "name": "PayrollRecord",
+  "type": "object",
+  "properties": {
+    "person_type": {
+      "type": "string",
+      "enum": [
+        "teacher",
+        "partner"
+      ],
+      "description": "Ki\u015fi tipi"
+    },
+    "person_id": {
+      "type": "string",
+      "description": "Teacher veya Partner ID"
+    },
+    "person_name": {
+      "type": "string",
+      "description": "Ki\u015fi ad\u0131 (h\u0131zl\u0131 eri\u015fim i\u00e7in)"
+    },
+    "period": {
+      "type": "string",
+      "description": "D\u00f6nem (\u00f6rn: March 2026)"
+    },
+    "amount": {
+      "type": "number",
+      "description": "\u00d6deme tutar\u0131 (\u00a3)"
+    },
+    "payment_type": {
+      "type": "string",
+      "enum": [
+        "salary",
+        "statutory",
+        "cash",
+        "transfer",
+        "dividend",
+        "bonus",
+        "advance",
+        "deduction",
+        "other"
+      ],
+      "default": "salary",
+      "description": "\u00d6deme t\u00fcr\u00fc"
+    },
+    "is_deduction": {
+      "type": "boolean",
+      "default": false,
+      "description": "Avans/kesinti mi? true ise toplam alacaktan d\u00fc\u015f\u00fcl\u00fcr (fiilen \u00f6denmi\u015f say\u0131l\u0131r)"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "bank_transfer",
+        "cash",
+        "check"
+      ],
+      "default": "bank_transfer",
+      "description": "\u00d6deme y\u00f6ntemi"
+    },
+    "payment_date": {
+      "type": "string",
+      "format": "date",
+      "description": "\u00d6deme tarihi"
+    },
+    "reference": {
+      "type": "string",
+      "description": "Referans numaras\u0131"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "paid"
+      ],
+      "default": "pending",
+      "description": "\u00d6deme durumu"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notlar"
+    }
+  },
+  "required": [
+    "person_type",
+    "person_id",
+    "person_name",
+    "period",
+    "amount",
+    "payment_date"
+  ]
+}

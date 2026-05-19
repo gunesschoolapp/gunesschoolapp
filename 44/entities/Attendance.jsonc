@@ -1,0 +1,42 @@
+{
+  "name": "Attendance",
+  "type": "object",
+  "properties": {
+    "lesson_id": {
+      "type": "string",
+      "description": "\u0130li\u015fkili ders"
+    },
+    "student_id": {
+      "type": "string",
+      "description": "\u00d6\u011frenci ID"
+    },
+    "course_id": {
+      "type": "string",
+      "description": "Kurs ID"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Tarih"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "present",
+        "absent",
+        "late",
+        "excused"
+      ],
+      "default": "present",
+      "description": "Yoklama durumu"
+    },
+    "teacher_comment": {
+      "type": "string",
+      "description": "\u00d6\u011fretmen yorumu"
+    }
+  },
+  "required": [
+    "student_id",
+    "date"
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "name": "EmailAccount",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Hesap ad\u0131 (\u00f6rn: Okul Genel, Kay\u0131t, Destek)"
+    },
+    "email": {
+      "type": "string",
+      "description": "E-posta adresi"
+    },
+    "smtp_host": {
+      "type": "string",
+      "description": "SMTP sunucu adresi"
+    },
+    "smtp_port": {
+      "type": "number",
+      "description": "SMTP port (587 veya 465)",
+      "default": 587
+    },
+    "smtp_user": {
+      "type": "string",
+      "description": "SMTP kullan\u0131c\u0131 ad\u0131"
+    },
+    "smtp_pass": {
+      "type": "string",
+      "description": "SMTP \u015fifresi"
+    },
+    "from_name": {
+      "type": "string",
+      "description": "G\u00f6nderici ad\u0131"
+    },
+    "use_ssl": {
+      "type": "boolean",
+      "default": false,
+      "description": "SSL/TLS kullan (port 465 i\u00e7in true)"
+    },
+    "imap_host": {
+      "type": "string",
+      "description": "IMAP sunucu adresi (gelen kutusu i\u00e7in)"
+    },
+    "imap_port": {
+      "type": "number",
+      "description": "IMAP port (genellikle 993)",
+      "default": 993
+    },
+    "imap_ssl": {
+      "type": "boolean",
+      "default": true,
+      "description": "IMAP SSL kullan"
+    },
+    "is_default": {
+      "type": "boolean",
+      "default": false,
+      "description": "Varsay\u0131lan hesap"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive"
+      ],
+      "default": "active"
+    }
+  },
+  "required": [
+    "name",
+    "email",
+    "smtp_host",
+    "smtp_user",
+    "smtp_pass"
+  ]
+}

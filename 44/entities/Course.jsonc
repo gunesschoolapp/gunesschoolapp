@@ -1,0 +1,61 @@
+{
+  "name": "Course",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Kurs ad\u0131"
+    },
+    "teacher": {
+      "type": "string",
+      "description": "\u00d6\u011fretmen ad\u0131"
+    },
+    "schedule": {
+      "type": "string",
+      "description": "Ders program\u0131 (\u00f6r: Pzt-\u00c7r\u015f 14:00-15:30)"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Ba\u015flang\u0131\u00e7 tarihi"
+    },
+    "end_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Biti\u015f tarihi"
+    },
+    "max_students": {
+      "type": "number",
+      "description": "Maksimum \u00f6\u011frenci say\u0131s\u0131"
+    },
+    "enrolled_students": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Kay\u0131tl\u0131 \u00f6\u011frenci ID'leri"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "upcoming",
+        "completed",
+        "cancelled"
+      ],
+      "default": "active",
+      "description": "Kurs durumu"
+    },
+    "room": {
+      "type": "string",
+      "description": "S\u0131n\u0131f/Oda"
+    },
+    "description": {
+      "type": "string",
+      "description": "Kurs a\u00e7\u0131klamas\u0131"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

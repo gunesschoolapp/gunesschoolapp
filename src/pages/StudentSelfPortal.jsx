@@ -1,0 +1,439 @@
+import React, { useState, useEffect } from 'react';
+import { base44 } from '@/api/base44Client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  CreditCard, BookOpen, Calendar, CheckCircle, XCircle, Clock,
+  AlertCircle, User, MapPin, Award, TrendingUp, Bot, MessageSquare
+} from 'lucide-react';
+import AITeacherChat from '@/components/ai-teacher/AITeacherChat';
+import StudentChatPanel from '@/components/chat/StudentChatPanel';
+import { format, parseISO } from 'date-fns';
+import { tr } from 'date-fns/locale';
+
+const attConfig = {
+  present: { label: 'Katıldı', icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  absent: { label: 'Katılmadı', icon: XCircle, color: 'text-red-600', bg: 'bg-red-50' },
+  late: { label: 'Geç', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
+  excused: { label: 'Mazeretli', icon: AlertCircle, color: 'text-blue-600', bg: 'bg-blue-50' },
+};
+
+const payStatus = {
+  paid: { label: 'Ödendi', color: 'bg-emerald-100 text-emerald-700' },
+  pending: { label: 'Bekliyor', color: 'bg-amber-100 text-amber-700' },
+  overdue: { label: 'Gecikmiş', color: 'bg-red-100 text-red-700' },
+  cancelled: { label: 'İptal', color: 'bg-gray-100 text-gray-600' },
+};
+
+const levelColors = {
+  A1: 'bg-emerald-100 text-emerald-700', A2: 'bg-teal-100 text-teal-700',
+  B1: 'bg-blue-100 text-blue-700', B2: 'bg-indigo-100 text-indigo-700',
+  C1: 'bg-violet-100 text-violet-700', C2: 'bg-purple-100 text-purple-700',
+};
+
+export default function StudentSelfPortal() {
+  const [user, setUser] = useState(null);
+  const [studentRecord, setStudentRecord] = useState(null);
+  const [payments, setPayments] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [lessons, setLessons] = useState([]);
+  const [attendance, setAttendance] = useState([]);
+  const [certificates, setCertificates] = useState([]);
+  const [progress, setProgress] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    base44.auth.me().then(async u => {
+      if (!u) { base44.auth.redirectToLogin(window.location.href); return; }
+      setUser(u);
+
+      // Find student record by email
+      const students = await base44.entities.Student.filter({ email: u.email });
+      const student = students[0] || null;
+      setStudentRecord(student);
+
+      if (!student) { setLoading(false); return; }
+
+      const allCourses = await base44.entities.Course.list();
+      const myCourses = allCourses.filter(c => (c.enrolled_students || []).includes(student.id));
+      setCourses(myCourses);
+
+      const courseIds = myCourses.map(c => c.id);
+
+      await Promise.all([
+        base44.entities.Payment.filter({ student_id: student.id }, '-payment_date', 50).then(setPayments),
+        base44.entities.Invoice.filter({ student_id: student.id }, '-issue_date', 20).then(setInvoices),
+        base44.entities.Certificate.filter({ student_id: student.id }, '-completion_date', 10).then(setCertificates),
+        base44.entities.ProgressReport.filter({ student_id: student.id }, '-created_date', 5).then(setProgress),
+        base44.entities.Attendance.filter({ student_id: student.id }, '-date', 100).then(setAttendance),
+        courseIds.length > 0
+          ? base44.entities.Lesson.list('-date', 100).then(all =>
+              setLessons(all.filter(l => courseIds.includes(l.course_id)))
+            )
+          : Promise.resolve(),
+      ]);
+      setLoading(false);
+    }).catch(() => {
+      base44.auth.redirectToLogin(window.location.href);
+    });
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!studentRecord) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-6">
+        <Card className="max-w-sm w-full text-center">
+          <CardContent className="p-8">
+            <User className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-40" />
+            <h2 className="font-semibold text-lg mb-2">Öğrenci kaydı bulunamadı</h2>
+            <p className="text-sm text-muted-foreground">
+              {user?.email} e-posta adresiyle kayıtlı bir öğrenci profili yok.
+              Lütfen okul ile iletişime geçin.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const today = format(new Date(), 'yyyy-MM-dd');
+  const upcomingLessons = lessons.filter(l => l.date >= today && l.status !== 'cancelled').sort((a, b) => a.date.localeCompare(b.date)).slice(0, 15);
+  const paidTotal = payments.filter(p => p.status === 'paid').reduce((s, p) => s + (p.amount || 0), 0);
+  const pendingTotal = payments.filter(p => p.status === 'pending' || p.status === 'overdue').reduce((s, p) => s + (p.amount || 0), 0);
+  const presentCount = attendance.filter(a => a.status === 'present').length;
+  const attRate = attendance.length > 0 ? Math.round(((presentCount + attendance.filter(a => a.status === 'late').length) / attendance.length) * 100) : 0;
+  const latestProgress = progress[0];
+
+  return (
+    <div className="min-h-screen bg-background pb-10">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-primary to-blue-600 text-white px-4 pt-8 pb-6">
+        <div className="max-w-2xl mx-auto">
+          <p className="text-white/70 text-sm">Hoş geldiniz,</p>
+          <h1 className="text-2xl font-bold mt-1">{studentRecord.full_name}</h1>
+          <div className="flex items-center gap-3 mt-3 flex-wrap">
+            {studentRecord.cefr_level && (
+              <span className="bg-white/20 text-white text-xs px-2.5 py-1 rounded-full font-medium">
+                {studentRecord.cefr_level}
+              </span>
+            )}
+            {certificates.length > 0 && (
+              <span className="bg-white/20 text-white text-xs px-2.5 py-1 rounded-full font-medium flex items-center gap-1">
+                <Award className="w-3 h-3" /> {certificates.length} Sertifika
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Summary stats */}
+      <div className="max-w-2xl mx-auto px-4 -mt-4">
+        <div className="grid grid-cols-3 gap-3">
+          <Card className="text-center">
+            <CardContent className="p-3">
+              <p className="text-lg font-bold text-emerald-600">£{paidTotal.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground">Ödendi</p>
+            </CardContent>
+          </Card>
+          <Card className="text-center">
+            <CardContent className="p-3">
+              <p className={`text-lg font-bold ${pendingTotal > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>£{pendingTotal.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground">Bekleyen</p>
+            </CardContent>
+          </Card>
+          <Card className="text-center">
+            <CardContent className="p-3">
+              <p className={`text-lg font-bold ${attRate >= 80 ? 'text-emerald-600' : attRate >= 60 ? 'text-amber-600' : 'text-red-600'}`}>%{attRate}</p>
+              <p className="text-xs text-muted-foreground">Devam</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="max-w-2xl mx-auto px-4 mt-5">
+        <Tabs defaultValue="schedule">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="schedule" className="text-xs gap-1"><Calendar className="w-3.5 h-3.5" />Ders Programı</TabsTrigger>
+            <TabsTrigger value="payments" className="text-xs gap-1"><CreditCard className="w-3.5 h-3.5" />Ödemeler</TabsTrigger>
+            <TabsTrigger value="attendance" className="text-xs gap-1"><CheckCircle className="w-3.5 h-3.5" />Devam</TabsTrigger>
+            <TabsTrigger value="messages" className="text-xs gap-1"><MessageSquare className="w-3.5 h-3.5" />Mesajlar</TabsTrigger>
+            <TabsTrigger value="ai_teacher" className="text-xs gap-1"><Bot className="w-3.5 h-3.5" />AI Öğretmen</TabsTrigger>
+          </TabsList>
+
+          {/* SCHEDULE TAB */}
+          <TabsContent value="schedule" className="mt-4 space-y-4">
+            {/* Enrolled courses */}
+            {courses.length > 0 && (
+              <div>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Kayıtlı Kurslar</h3>
+                <div className="space-y-2">
+                  {courses.map(course => (
+                    <Card key={course.id}>
+                      <CardContent className="p-4 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <BookOpen className="w-4 h-4 text-primary" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-sm truncate">{course.name}</p>
+                            <div className="flex flex-wrap gap-2 mt-0.5">
+                              {course.teacher && <span className="text-xs text-muted-foreground flex items-center gap-1"><User className="w-3 h-3" />{course.teacher}</span>}
+                              {course.schedule && <span className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" />{course.schedule}</span>}
+                              {course.room && <span className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3" />{course.room}</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <Badge className={levelColors[course.cefr_level] || 'bg-gray-100 text-gray-700'}>{course.cefr_level}</Badge>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Upcoming lessons */}
+            <div>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Yaklaşan Dersler</h3>
+              {upcomingLessons.length === 0 ? (
+                <div className="text-center py-10 text-muted-foreground">
+                  <Calendar className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">Yaklaşan ders bulunmuyor</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {upcomingLessons.map(lesson => {
+                    const course = courses.find(c => c.id === lesson.course_id);
+                    return (
+                      <Card key={lesson.id}>
+                        <CardContent className="p-3 flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-primary/10 flex flex-col items-center justify-center flex-shrink-0">
+                            <span className="text-primary text-xs font-bold leading-none">{format(parseISO(lesson.date), 'dd')}</span>
+                            <span className="text-primary/60 text-[10px]">{format(parseISO(lesson.date), 'MMM', { locale: tr })}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{course?.name || 'Ders'}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {lesson.start_time}{lesson.end_time ? ` - ${lesson.end_time}` : ''}
+                              {lesson.topic && ` · ${lesson.topic}`}
+                              {lesson.room && ` · ${lesson.room}`}
+                            </p>
+                          </div>
+                          <Badge className="bg-blue-100 text-blue-700 text-xs flex-shrink-0">Planlandı</Badge>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Progress */}
+            {latestProgress && (
+              <div>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Son İlerleme Raporu</h3>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TrendingUp className="w-4 h-4 text-primary" />
+                      <span className="text-sm font-medium">{latestProgress.period}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { label: 'Konuşma', val: latestProgress.speaking },
+                        { label: 'Dinleme', val: latestProgress.listening },
+                        { label: 'Okuma', val: latestProgress.reading },
+                        { label: 'Yazma', val: latestProgress.writing },
+                        { label: 'Gramer', val: latestProgress.grammar },
+                        { label: 'Kelime', val: latestProgress.vocabulary },
+                      ].filter(s => s.val).map(skill => (
+                        <div key={skill.label}>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-muted-foreground">{skill.label}</span>
+                            <span className="font-medium">{skill.val}/10</span>
+                          </div>
+                          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-primary rounded-full" style={{ width: `${(skill.val / 10) * 100}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {latestProgress.ai_summary && (
+                      <p className="text-xs text-muted-foreground mt-3 italic">"{latestProgress.ai_summary}"</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* PAYMENTS TAB */}
+          <TabsContent value="payments" className="mt-4 space-y-4">
+            {payments.length === 0 && invoices.length === 0 ? (
+              <div className="text-center py-16 text-muted-foreground">
+                <CreditCard className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">Henüz ödeme kaydı yok</p>
+              </div>
+            ) : (
+              <>
+                {/* Payment summary */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-card border rounded-xl p-3 text-center">
+                    <p className="text-base font-bold">£{(paidTotal + pendingTotal).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Toplam</p>
+                  </div>
+                  <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-center">
+                    <p className="text-base font-bold text-emerald-700">£{paidTotal.toLocaleString()}</p>
+                    <p className="text-xs text-emerald-600">Ödendi</p>
+                  </div>
+                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 text-center">
+                    <p className="text-base font-bold text-amber-700">£{pendingTotal.toLocaleString()}</p>
+                    <p className="text-xs text-amber-600">Bekleyen</p>
+                  </div>
+                </div>
+
+                {/* Payments list */}
+                {payments.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Ödeme Geçmişi</h3>
+                    <div className="space-y-2">
+                      {payments.map(p => {
+                        const s = payStatus[p.status] || payStatus.pending;
+                        return (
+                          <Card key={p.id}>
+                            <CardContent className="p-3 flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <CreditCard className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold">£{(p.amount || 0).toLocaleString()}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {p.payment_date ? format(new Date(p.payment_date), 'dd MMM yyyy') : p.due_date ? `Vade: ${format(new Date(p.due_date), 'dd MMM yyyy')}` : '-'}
+                                    {p.total_installments > 1 && ` · Taksit ${p.installment_number}/${p.total_installments}`}
+                                  </p>
+                                </div>
+                              </div>
+                              <Badge className={`${s.color} text-xs flex-shrink-0`}>{s.label}</Badge>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Invoices */}
+                {invoices.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Faturalar</h3>
+                    <div className="space-y-2">
+                      {invoices.map(inv => (
+                        <Card key={inv.id}>
+                          <CardContent className="p-3 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium">{inv.invoice_number}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {inv.issue_date ? format(new Date(inv.issue_date), 'dd MMM yyyy') : '-'}
+                              </p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-sm font-bold">£{(inv.amount || 0).toLocaleString()}</p>
+                              <Badge className={`text-xs ${payStatus[inv.status]?.color || 'bg-gray-100 text-gray-600'}`}>
+                                {payStatus[inv.status]?.label || inv.status}
+                              </Badge>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </TabsContent>
+
+          {/* ATTENDANCE TAB */}
+          <TabsContent value="attendance" className="mt-4 space-y-4">
+            {/* Rate */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-muted-foreground font-medium">Genel Devam Oranı</span>
+                  <span className={`font-bold ${attRate >= 80 ? 'text-emerald-600' : attRate >= 60 ? 'text-amber-600' : 'text-red-600'}`}>%{attRate}</span>
+                </div>
+                <div className="h-3 bg-muted rounded-full overflow-hidden mb-3">
+                  <div
+                    className={`h-full rounded-full ${attRate >= 80 ? 'bg-emerald-500' : attRate >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
+                    style={{ width: `${attRate}%` }}
+                  />
+                </div>
+                <div className="grid grid-cols-4 gap-2 text-center">
+                  {[
+                    { label: 'Katıldı', count: attendance.filter(a => a.status === 'present').length, color: 'text-emerald-600' },
+                    { label: 'Katılmadı', count: attendance.filter(a => a.status === 'absent').length, color: 'text-red-600' },
+                    { label: 'Geç', count: attendance.filter(a => a.status === 'late').length, color: 'text-amber-600' },
+                    { label: 'Mazeretli', count: attendance.filter(a => a.status === 'excused').length, color: 'text-blue-600' },
+                  ].map(s => (
+                    <div key={s.label}>
+                      <p className={`text-lg font-bold ${s.color}`}>{s.count}</p>
+                      <p className="text-xs text-muted-foreground">{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Attendance list */}
+            {attendance.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Calendar className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Devam kaydı bulunamadı</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {attendance.map(a => {
+                  const s = attConfig[a.status] || attConfig.present;
+                  const Icon = s.icon;
+                  const course = courses.find(c => c.id === a.course_id);
+                  return (
+                    <Card key={a.id}>
+                      <CardContent className="p-3 flex items-center gap-3">
+                        <div className={`w-9 h-9 rounded-xl ${s.bg} flex items-center justify-center flex-shrink-0`}>
+                          <Icon className={`w-4 h-4 ${s.color}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium">{course?.name || 'Ders'}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {a.date ? format(parseISO(a.date), 'dd MMM yyyy', { locale: tr }) : '-'}
+                          </p>
+                        </div>
+                        <span className={`text-xs font-medium flex-shrink-0 ${s.color}`}>{s.label}</span>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+          {/* MESSAGES TAB */}
+          <TabsContent value="messages" className="mt-4">
+            <StudentChatPanel studentRecord={studentRecord} user={user} />
+          </TabsContent>
+
+          {/* AI TEACHER TAB */}
+          <TabsContent value="ai_teacher" className="mt-4">
+            <AITeacherChat student={studentRecord} />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+}

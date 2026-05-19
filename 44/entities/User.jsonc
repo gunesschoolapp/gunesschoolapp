@@ -1,0 +1,41 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "teacher",
+        "reception",
+        "marketing",
+        "accounting",
+        "student",
+        "user",
+        "receptionist",
+        "staff",
+        "team_admin"
+      ],
+      "default": "user",
+      "description": "Kullan\u0131c\u0131n\u0131n ana rol\u00fc"
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Granular permissions array: ['Students:view', 'Students:edit', ...]"
+    },
+    "permission_set_id": {
+      "type": "string",
+      "description": "Atanan PermissionSet ID'si"
+    },
+    "custom_permissions": {
+      "type": "object",
+      "description": "Ki\u015fiye \u00f6zel ek izin overrides",
+      "default": {}
+    }
+  },
+  "required": []
+}

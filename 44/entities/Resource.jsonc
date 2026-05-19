@@ -1,0 +1,101 @@
+{
+  "name": "Resource",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Resource title"
+    },
+    "description": {
+      "type": "string",
+      "description": "Short description"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "document",
+        "video",
+        "link",
+        "image"
+      ],
+      "default": "document",
+      "description": "Resource type"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "grammar",
+        "vocabulary",
+        "listening",
+        "reading",
+        "writing",
+        "speaking",
+        "ielts",
+        "general",
+        "other"
+      ],
+      "default": "general",
+      "description": "Subject category"
+    },
+    "cefr_level": {
+      "type": "string",
+      "enum": [
+        "A1",
+        "A2",
+        "B1",
+        "B2",
+        "C1",
+        "C2",
+        "all"
+      ],
+      "default": "all",
+      "description": "Target CEFR level"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "Uploaded file URL (for documents/images)"
+    },
+    "link_url": {
+      "type": "string",
+      "description": "External link URL (for video/link types)"
+    },
+    "thumbnail_url": {
+      "type": "string",
+      "description": "Optional thumbnail image URL"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Search tags"
+    },
+    "uploaded_by_name": {
+      "type": "string",
+      "description": "Uploader display name"
+    },
+    "uploaded_by_email": {
+      "type": "string",
+      "description": "Uploader email"
+    },
+    "visible_to": {
+      "type": "string",
+      "enum": [
+        "all",
+        "students_only",
+        "staff_only"
+      ],
+      "default": "all",
+      "description": "Visibility setting"
+    },
+    "download_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Number of times accessed"
+    }
+  },
+  "required": [
+    "title",
+    "type"
+  ]
+}

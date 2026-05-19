@@ -1,0 +1,64 @@
+{
+  "name": "NotificationTemplate",
+  "type": "object",
+  "properties": {
+    "template_type": {
+      "type": "string",
+      "enum": [
+        "payment_reminder",
+        "lesson_cancellation",
+        "announcement",
+        "trial_scheduled",
+        "custom"
+      ],
+      "description": "Template t\u00fcr\u00fc"
+    },
+    "channel": {
+      "type": "string",
+      "enum": [
+        "sms",
+        "whatsapp"
+      ],
+      "description": "\u0130leti\u015fim kanal\u0131"
+    },
+    "title": {
+      "type": "string",
+      "description": "Template ba\u015fl\u0131\u011f\u0131"
+    },
+    "template_text": {
+      "type": "string",
+      "description": "Template metni ({{student_name}}, {{amount}}, {{date}} vs kullanabilir)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Template aktif mi?"
+    },
+    "language": {
+      "type": "string",
+      "enum": [
+        "tr",
+        "en"
+      ],
+      "default": "tr",
+      "description": "Dil"
+    },
+    "variables": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Template'de kullan\u0131lan de\u011fi\u015fkenler (student_name, amount, date, lesson_name vs)"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notlar"
+    }
+  },
+  "required": [
+    "template_type",
+    "channel",
+    "title",
+    "template_text"
+  ]
+}

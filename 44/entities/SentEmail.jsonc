@@ -1,0 +1,60 @@
+{
+  "name": "SentEmail",
+  "type": "object",
+  "properties": {
+    "to": {
+      "type": "string",
+      "description": "Al\u0131c\u0131(lar) - virg\u00fclle ayr\u0131lm\u0131\u015f"
+    },
+    "cc": {
+      "type": "string",
+      "description": "CC al\u0131c\u0131lar\u0131"
+    },
+    "bcc": {
+      "type": "string",
+      "description": "BCC al\u0131c\u0131lar\u0131"
+    },
+    "subject": {
+      "type": "string"
+    },
+    "body": {
+      "type": "string"
+    },
+    "from_email": {
+      "type": "string"
+    },
+    "from_name": {
+      "type": "string"
+    },
+    "account_id": {
+      "type": "string",
+      "description": "G\u00f6nderen EmailAccount ID"
+    },
+    "sent_by": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "sent",
+        "failed",
+        "draft"
+      ],
+      "default": "sent"
+    },
+    "error_message": {
+      "type": "string"
+    },
+    "in_reply_to_id": {
+      "type": "string",
+      "description": "Yan\u0131tlanan InboxEmail ID"
+    },
+    "thread_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "to",
+    "subject"
+  ]
+}

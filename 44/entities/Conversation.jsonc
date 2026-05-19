@@ -1,0 +1,58 @@
+{
+  "name": "Conversation",
+  "type": "object",
+  "properties": {
+    "student_id": {
+      "type": "string",
+      "description": "Linked student ID"
+    },
+    "student_name": {
+      "type": "string",
+      "description": "Student display name"
+    },
+    "channel": {
+      "type": "string",
+      "enum": [
+        "whatsapp",
+        "email",
+        "facebook",
+        "instagram",
+        "sms",
+        "other"
+      ],
+      "description": "Communication channel"
+    },
+    "contact_identifier": {
+      "type": "string",
+      "description": "Phone, email, or social handle"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "open",
+        "resolved",
+        "archived"
+      ],
+      "default": "open"
+    },
+    "last_message": {
+      "type": "string",
+      "description": "Snippet of last message"
+    },
+    "last_message_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "unread_count": {
+      "type": "number",
+      "default": 0
+    },
+    "assigned_to": {
+      "type": "string",
+      "description": "Teacher/staff email"
+    }
+  },
+  "required": [
+    "channel"
+  ]
+}

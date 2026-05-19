@@ -1,0 +1,183 @@
+{
+  "name": "Student",
+  "type": "object",
+  "properties": {
+    "full_name": {
+      "type": "string",
+      "description": "Ad soyad"
+    },
+    "email": {
+      "type": "string",
+      "description": "E-posta adresi"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Ev / Mobil telefon"
+    },
+    "workplace_phone": {
+      "type": "string",
+      "description": "\u0130\u015f telefonu"
+    },
+    "profession": {
+      "type": "string",
+      "description": "Meslek"
+    },
+    "date_of_birth": {
+      "type": "string",
+      "format": "date",
+      "description": "Do\u011fum tarihi"
+    },
+    "passport_number": {
+      "type": "string",
+      "description": "Pasaport / TC Kimlik No"
+    },
+    "passport_expiry": {
+      "type": "string",
+      "format": "date",
+      "description": "Pasaport ge\u00e7erlilik tarihi"
+    },
+    "nationality": {
+      "type": "string",
+      "description": "Uyruk"
+    },
+    "address": {
+      "type": "string",
+      "description": "Ev Adresi"
+    },
+    "postal_code": {
+      "type": "string",
+      "description": "Ev Posta Kodu"
+    },
+    "workplace_address": {
+      "type": "string",
+      "description": "\u0130\u015f Adresi"
+    },
+    "workplace_postal_code": {
+      "type": "string",
+      "description": "\u0130\u015f Posta Kodu"
+    },
+    "relative_phone": {
+      "type": "string",
+      "description": "Akraba / Yak\u0131n telefonu"
+    },
+    "emergency_contact_name": {
+      "type": "string",
+      "description": "Acil durum ki\u015fisi ad\u0131"
+    },
+    "emergency_contact_phone": {
+      "type": "string",
+      "description": "Acil durum ki\u015fisi telefonu"
+    },
+    "emergency_contact_relation": {
+      "type": "string",
+      "description": "Yak\u0131nl\u0131k derecesi (e\u015f, karde\u015f, vb.)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "enrolled",
+        "completed",
+        "prospect"
+      ],
+      "default": "enrolled",
+      "description": "\u00d6\u011frenci durumu"
+    },
+    "enrollment_status": {
+      "type": "string",
+      "enum": [
+        "not_started",
+        "started"
+      ],
+      "default": "not_started",
+      "description": "Ders durumu"
+    },
+    "enrollment_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Kay\u0131t tarihi"
+    },
+    "cefr_level": {
+      "type": "string",
+      "enum": [
+        "A1",
+        "A2",
+        "B1",
+        "B2",
+        "C1",
+        "C2"
+      ],
+      "description": "CEFR dil seviyesi"
+    },
+    "course_hours": {
+      "type": "number",
+      "description": "Toplam ders saati (\u00f6rn: 12)"
+    },
+    "photo_url": {
+      "type": "string",
+      "description": "Foto\u011fraf\u0131"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notlar"
+    },
+    "course_price": {
+      "type": "number",
+      "description": "\u00d6\u011frencinin \u00f6deyece\u011fi kurs \u00fccreti (\u00a3)"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "website",
+        "whatsapp",
+        "email",
+        "referral",
+        "walk_in",
+        "social_media"
+      ],
+      "description": "Nas\u0131l geldi?"
+    },
+    "assigned_to": {
+      "type": "string",
+      "description": "Atanan personel"
+    },
+    "course_id": {
+      "type": "string",
+      "description": "Kay\u0131tl\u0131 oldu\u011fu kurs ID"
+    },
+    "documents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "description": "Belge ad\u0131"
+          },
+          "file_url": {
+            "type": "string",
+            "description": "Y\u00fckl\u00fc dosya URL"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "uploaded_date": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "description": "\u00d6\u011frenci belgeler"
+    },
+    "login_invite_sent": {
+      "type": "boolean",
+      "default": false,
+      "description": "Login daveti g\u00f6nderildi mi?"
+    }
+  },
+  "required": [
+    "full_name"
+  ]
+}

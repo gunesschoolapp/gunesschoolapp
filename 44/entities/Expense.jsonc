@@ -1,0 +1,66 @@
+{
+  "name": "Expense",
+  "type": "object",
+  "properties": {
+    "category": {
+      "type": "string",
+      "enum": [
+        "rent",
+        "utilities",
+        "internet",
+        "maintenance",
+        "supplies",
+        "equipment",
+        "insurance",
+        "marketing",
+        "other"
+      ],
+      "description": "Gider kategorisi"
+    },
+    "description": {
+      "type": "string",
+      "description": "Gider a\u00e7\u0131klamas\u0131"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Tutar (\u00a3)"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Gider tarihi"
+    },
+    "period": {
+      "type": "string",
+      "description": "D\u00f6nem (Ocak 2026)"
+    },
+    "paid": {
+      "type": "boolean",
+      "default": false,
+      "description": "\u00d6dendi mi?"
+    },
+    "payment_method": {
+      "type": "string",
+      "enum": [
+        "bank_transfer",
+        "cash",
+        "credit_card"
+      ],
+      "description": "\u00d6deme y\u00f6ntemi"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notlar"
+    },
+    "document_url": {
+      "type": "string",
+      "description": "Belge/fi\u015f dosya URL (PDF veya resim)"
+    }
+  },
+  "required": [
+    "category",
+    "description",
+    "amount",
+    "date"
+  ]
+}

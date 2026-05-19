@@ -1,0 +1,63 @@
+{
+  "name": "StaffPin",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Personelin e-posta adresi (User ile e\u015fle\u015fir)"
+    },
+    "full_name": {
+      "type": "string",
+      "description": "Personelin ad\u0131 soyad\u0131"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefon numaras\u0131 (giri\u015f i\u00e7in)"
+    },
+    "pin_hash": {
+      "type": "string",
+      "description": "PIN kodu (hash'li)"
+    },
+    "pin_plain": {
+      "type": "string",
+      "description": "PIN kodu (admin g\u00f6r\u00fcnt\u00fclemesi i\u00e7in)"
+    },
+    "password_hash": {
+      "type": "string",
+      "description": "\u015eifre hash'i (email login i\u00e7in)"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "super_admin",
+        "admin",
+        "teacher",
+        "staff"
+      ],
+      "default": "staff"
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Aktif mi?"
+    },
+    "is_banned": {
+      "type": "boolean",
+      "default": false,
+      "description": "Yasakl\u0131 m\u0131? (super admin taraf\u0131ndan)"
+    },
+    "ban_reason": {
+      "type": "string",
+      "description": "Yasaklama nedeni"
+    },
+    "last_login": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "full_name",
+    "phone",
+    "pin_plain"
+  ]
+}

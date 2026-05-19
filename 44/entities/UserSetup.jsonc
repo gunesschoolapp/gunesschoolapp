@@ -1,0 +1,69 @@
+{
+  "name": "UserSetup",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "description": "User ID (dolu oldu\u011funda e\u015fle\u015ftirilmi\u015f)"
+    },
+    "email": {
+      "type": "string",
+      "description": "Davet edilen e-posta"
+    },
+    "full_name": {
+      "type": "string",
+      "description": "Ki\u015finin ad\u0131 (davet s\u0131ras\u0131nda)"
+    },
+    "invited_role": {
+      "type": "string",
+      "description": "Davet s\u0131ras\u0131nda atanan rol (admin, personel, teacher, student, user)"
+    },
+    "invite_type": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "student",
+        "staff"
+      ],
+      "default": "manual",
+      "description": "Davet tipi"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "active",
+        "rejected"
+      ],
+      "default": "pending",
+      "description": "Kullan\u0131c\u0131 durumu"
+    },
+    "registration_token": {
+      "type": "string",
+      "description": "Kay\u0131t linki i\u00e7in benzersiz token"
+    },
+    "setup_completed": {
+      "type": "boolean",
+      "default": false,
+      "description": "\u0130lk kurulum tamamland\u0131 m\u0131?"
+    },
+    "last_login": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Son giri\u015f zaman\u0131"
+    },
+    "invited_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Davet g\u00f6nderilme tarihi"
+    },
+    "activated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Etkinle\u015ftirilme tarihi"
+    }
+  },
+  "required": [
+    "email"
+  ]
+}

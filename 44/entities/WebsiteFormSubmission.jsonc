@@ -1,0 +1,42 @@
+{
+  "name": "WebsiteFormSubmission",
+  "type": "object",
+  "properties": {
+    "form_id": {
+      "type": "string",
+      "description": "WebsiteForm ID"
+    },
+    "form_slug": {
+      "type": "string",
+      "description": "Form slug (h\u0131zl\u0131 sorgu i\u00e7in)"
+    },
+    "form_data": {
+      "type": "object",
+      "description": "Form verisi (dinamik key-value)"
+    },
+    "student_id": {
+      "type": "string",
+      "description": "Ba\u011fl\u0131 \u00f6\u011frenci ID (e\u011fer varsa)"
+    },
+    "lead_id": {
+      "type": "string",
+      "description": "Ba\u011fl\u0131 lead ID (e\u011fer varsa)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "reviewed",
+        "converted"
+      ],
+      "default": "new"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "form_id",
+    "form_data"
+  ]
+}

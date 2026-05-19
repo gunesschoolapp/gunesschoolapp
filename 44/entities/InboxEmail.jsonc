@@ -1,0 +1,129 @@
+{
+  "name": "InboxEmail",
+  "type": "object",
+  "properties": {
+    "uid": {
+      "type": "string",
+      "description": "IMAP UID - dedup i\u00e7in"
+    },
+    "account_id": {
+      "type": "string",
+      "description": "EmailAccount ID"
+    },
+    "from_email": {
+      "type": "string"
+    },
+    "from_name": {
+      "type": "string"
+    },
+    "to": {
+      "type": "string"
+    },
+    "cc": {
+      "type": "string",
+      "description": "CC al\u0131c\u0131lar\u0131"
+    },
+    "bcc": {
+      "type": "string",
+      "description": "BCC al\u0131c\u0131lar\u0131"
+    },
+    "subject": {
+      "type": "string"
+    },
+    "body": {
+      "type": "string",
+      "description": "HTML veya plain text"
+    },
+    "snippet": {
+      "type": "string",
+      "description": "\u0130lk 200 karakter \u00f6nizleme"
+    },
+    "received_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "read": {
+      "type": "boolean",
+      "default": false
+    },
+    "starred": {
+      "type": "boolean",
+      "default": false
+    },
+    "archived": {
+      "type": "boolean",
+      "default": false
+    },
+    "spam": {
+      "type": "boolean",
+      "default": false
+    },
+    "trash": {
+      "type": "boolean",
+      "default": false
+    },
+    "draft": {
+      "type": "boolean",
+      "default": false
+    },
+    "has_attachments": {
+      "type": "boolean",
+      "default": false
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "number"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "thread_id": {
+      "type": "string",
+      "description": "Konu\u015fma zinciri ID"
+    },
+    "in_reply_to": {
+      "type": "string",
+      "description": "Yan\u0131tlanan mesaj ID"
+    },
+    "labels": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "\u00d6zel etiketler"
+    },
+    "student_id": {
+      "type": "string",
+      "description": "Ba\u011fl\u0131 \u00f6\u011frenci ID"
+    },
+    "visible_to_roles": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "visible_to_users": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "subject",
+    "from_email"
+  ]
+}

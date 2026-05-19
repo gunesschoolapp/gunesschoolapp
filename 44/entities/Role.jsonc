@@ -1,0 +1,34 @@
+{
+  "name": "Role",
+  "type": "object",
+  "properties": {
+    "role_name": {
+      "type": "string",
+      "description": "Role name (e.g., admin, teacher, staff)"
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Display name (e.g., Administrator)"
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of permission keys (e.g., canViewDashboard, canManageStudents)"
+    },
+    "is_system": {
+      "type": "boolean",
+      "default": false,
+      "description": "System roles cannot be deleted"
+    },
+    "description": {
+      "type": "string",
+      "description": "Role description"
+    }
+  },
+  "required": [
+    "role_name",
+    "display_name"
+  ]
+}

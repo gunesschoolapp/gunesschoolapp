@@ -1,0 +1,44 @@
+{
+  "name": "Assignment",
+  "type": "object",
+  "properties": {
+    "course_id": {
+      "type": "string",
+      "description": "Kurs ID"
+    },
+    "title": {
+      "type": "string",
+      "description": "\u00d6dev ba\u015fl\u0131\u011f\u0131"
+    },
+    "description": {
+      "type": "string",
+      "description": "\u00d6dev a\u00e7\u0131klamas\u0131"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Teslim tarihi"
+    },
+    "assigned_students": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Atanan \u00f6\u011frenci ID'leri"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "completed",
+        "cancelled"
+      ],
+      "default": "active",
+      "description": "\u00d6dev durumu"
+    }
+  },
+  "required": [
+    "title",
+    "course_id"
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "name": "Personnel",
+  "type": "object",
+  "properties": {
+    "full_name": {
+      "type": "string",
+      "description": "Ad soyad"
+    },
+    "email": {
+      "type": "string",
+      "description": "E-posta (login i\u00e7in)"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefon"
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "team_admin",
+        "teacher",
+        "receptionist",
+        "staff",
+        "user"
+      ],
+      "default": "staff",
+      "description": "Personel rol\u00fc \u2014 team_admin: \u00e7al\u0131\u015fan ekleyip yetkilerini y\u00f6netebilir"
+    },
+    "permissions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Eri\u015febilece\u011fi sayfalar (Dashboard, Leads, Students, Courses, Schedule, Teachers, Tasks, Invoices, Finance, Reports, Settings, Personnel, Classrooms, NotificationCenter)",
+      "default": []
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true,
+      "description": "Aktif mi?"
+    },
+    "password_reset_token": {
+      "type": "string",
+      "description": "\u015eifre s\u0131f\u0131rlama tokeni"
+    },
+    "password_reset_expires": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Token ge\u00e7erlilik tarihi"
+    },
+    "last_login": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Son giri\u015f tarihi"
+    },
+    "notes": {
+      "type": "string"
+    },
+    "login_invite_sent": {
+      "type": "boolean",
+      "default": false,
+      "description": "Login daveti g\u00f6nderildi mi?"
+    }
+  },
+  "required": [
+    "full_name",
+    "email"
+  ]
+}

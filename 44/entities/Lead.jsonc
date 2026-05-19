@@ -1,0 +1,109 @@
+{
+  "name": "Lead",
+  "type": "object",
+  "properties": {
+    "full_name": {
+      "type": "string",
+      "description": "Ad soyad"
+    },
+    "email": {
+      "type": "string",
+      "description": "E-posta adresi"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Telefon numaras\u0131"
+    },
+    "date_of_birth": {
+      "type": "string",
+      "format": "date",
+      "description": "Do\u011fum tarihi"
+    },
+    "nationality": {
+      "type": "string",
+      "description": "Uyruk"
+    },
+    "passport_number": {
+      "type": "string",
+      "description": "Pasaport / TC Kimlik No"
+    },
+    "passport_expiry": {
+      "type": "string",
+      "format": "date",
+      "description": "Pasaport ge\u00e7erlilik tarihi"
+    },
+    "address": {
+      "type": "string",
+      "description": "Adres"
+    },
+    "course_id": {
+      "type": "string",
+      "description": "Se\u00e7ili kurs ID"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "website",
+        "whatsapp",
+        "email",
+        "referral",
+        "walk_in",
+        "social_media",
+        "instagram"
+      ],
+      "description": "Lead kayna\u011f\u0131"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "contacted",
+        "negotiation",
+        "trial_scheduled",
+        "enrolled",
+        "lost"
+      ],
+      "default": "new",
+      "description": "Pipeline durumu: new=Yeni Lead, contacted=G\u00f6r\u00fc\u015f\u00fcld\u00fc, negotiation=Teklif Verildi, trial_scheduled=Karars\u0131z, enrolled=Kay\u0131t Oldu, lost=Kay\u0131p"
+    },
+    "interest_level": {
+      "type": "string",
+      "enum": [
+        "A1",
+        "A2",
+        "B1",
+        "B2",
+        "C1",
+        "C2",
+        "unknown"
+      ],
+      "default": "unknown",
+      "description": "\u0130lgilenilen CEFR seviyesi"
+    },
+    "notes": {
+      "type": "string",
+      "description": "G\u00f6r\u00fc\u015fme notlar\u0131"
+    },
+    "trial_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Trial ders tarihi"
+    },
+    "assigned_to": {
+      "type": "string",
+      "description": "Atanan personel"
+    },
+    "potential_sale_amount": {
+      "type": "number",
+      "description": "Potansiyel sat\u0131\u015f miktar\u0131 (\u00a3)"
+    },
+    "last_contact_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Son konu\u015fma tarihi"
+    }
+  },
+  "required": [
+    "full_name"
+  ]
+}

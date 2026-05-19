@@ -1,0 +1,77 @@
+{
+  "name": "FormSubmission",
+  "type": "object",
+  "properties": {
+    "form_type": {
+      "type": "string",
+      "enum": [
+        "lead",
+        "enrollment"
+      ],
+      "description": "Form t\u00fcr\u00fc"
+    },
+    "full_name": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "date_of_birth": {
+      "type": "string",
+      "format": "date"
+    },
+    "nationality": {
+      "type": "string"
+    },
+    "current_level": {
+      "type": "string",
+      "enum": [
+        "A1",
+        "A2",
+        "B1",
+        "B2",
+        "C1",
+        "C2",
+        "unknown"
+      ],
+      "default": "unknown"
+    },
+    "interested_course": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "how_did_you_hear": {
+      "type": "string",
+      "enum": [
+        "website",
+        "social_media",
+        "referral",
+        "walk_in",
+        "other"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "new",
+        "contacted",
+        "converted",
+        "rejected"
+      ],
+      "default": "new"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "full_name",
+    "email",
+    "form_type"
+  ]
+}
