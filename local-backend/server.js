@@ -28,14 +28,72 @@ db.exec(`
 // --- Constants ---
 const APP_ID = '69b72d75a405c6670480bbdf';
 
-// --- Demo User ---
-const DEMO_USER = {
+// --- In-memory session store (keyed by session token) ---
+const sessions = {};
+
+// Default admin session
+const ADMIN_USER = {
   id: 'demo-admin-001',
   email: 'admin@gunesenglish.com',
   full_name: 'Admin User',
   role: 'admin',
   matched_role: 'admin'
 };
+sessions['admin-token'] = ADMIN_USER;
+
+// Helper: get current user from request
+function getCurrentUser(req) {
+  const token = req.headers['x-session-token'] || req.cookies?.session_token || 'admin-token';
+  return sessions[token] || ADMIN_USER;
+}
+
+// --- Login endpoint ---
+app.post('/api/auth/login', (req, res) => {
+  const { email, password } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email required' });
+
+  // Check admin
+  if (email === 'admin@gunesenglish.com') {
+    sessions['admin-token'] = ADMIN_USER;
+    return res.json({ token: 'admin-token', user: ADMIN_USER });
+  }
+
+  // Look up in Student entities
+  const allStudents = db.prepare("SELECT * FROM entities WHERE entity_type = 'Student'").all();
+  const studentRows = allStudents.map(r => ({ id: r.id, ...JSON.parse(r.data) }));
+  const student = studentRows.find(s => s.email === email);
+  if (student) {
+    const token = `student-${student.id}-${Date.now()}`;
+    const user = {
+      id: student.id,
+      email: student.email,
+      full_name: student.full_name,
+      role: 'student',
+      matched_role: 'student',
+    };
+    sessions[token] = user;
+    return res.json({ token, user });
+  }
+
+  // Look up in Teacher entities
+  const allTeachers = db.prepare("SELECT * FROM entities WHERE entity_type = 'Teacher'").all();
+  const teacherRows = allTeachers.map(r => ({ id: r.id, ...JSON.parse(r.data) }));
+  const teacher = teacherRows.find(t => t.email === email);
+  if (teacher) {
+    const token = `teacher-${teacher.id}-${Date.now()}`;
+    const user = {
+      id: teacher.id,
+      email: teacher.email,
+      full_name: teacher.full_name,
+      role: 'teacher',
+      matched_role: 'teacher',
+    };
+    sessions[token] = user;
+    return res.json({ token, user });
+  }
+
+  return res.status(401).json({ error: 'User not found' });
+});
 
 // --- Helper: parse entity row ---
 function parseRow(row) {
@@ -57,18 +115,20 @@ app.get('/api/apps/public/prod/public-settings/by-id/:appId', (req, res) => {
 
 // --- Auth (SDK uses /apps/{appId}/entities/User/me) ---
 app.get(`/api/apps/${APP_ID}/entities/User/me`, (req, res) => {
-  res.json(DEMO_USER);
+  res.json(getCurrentUser(req));
 });
 app.put(`/api/apps/${APP_ID}/entities/User/me`, (req, res) => {
-  res.json({ ...DEMO_USER, ...req.body });
+  res.json({ ...getCurrentUser(req), ...req.body });
 });
 app.get('/api/apps/auth/me', (req, res) => {
-  res.json(DEMO_USER);
+  res.json(getCurrentUser(req));
 });
 app.get('/api/auth/me', (req, res) => {
-  res.json(DEMO_USER);
+  res.json(getCurrentUser(req));
 });
 app.post('/api/apps/auth/logout', (req, res) => {
+  const token = req.headers['x-session-token'];
+  if (token && token !== 'admin-token') delete sessions[token];
   res.json({ success: true });
 });
 app.get('/api/apps/auth/logout', (req, res) => {
@@ -238,8 +298,8 @@ app.post('/api/stripe/create-checkout-session', async (req, res) => {
         quantity: 1,
       }],
       mode: 'payment',
-      success_url: `${req.headers.origin || 'http://localhost:5173'}/Packages?success=true&session_id={CHECKOUT_SESSION_ID}&package_id=${packageId}`,
-      cancel_url: `${req.headers.origin || 'http://localhost:5173'}/Packages?canceled=true`,
+      success_url: `${req.headers.origin || 'http://localhost:5173'}/#/Packages?success=true&session_id={CHECKOUT_SESSION_ID}&package_id=${packageId}`,
+      cancel_url: `${req.headers.origin || 'http://localhost:5173'}/#/Packages?canceled=true`,
       metadata: { packageId, studentEmail, studentName },
     });
     res.json({ url: session.url, sessionId: session.id });
@@ -258,6 +318,172 @@ app.get('/api/stripe/session/:sessionId', async (req, res) => {
   }
 });
 
+// ─── Firestore REST helpers ───────────────────────────────────
+const firestoreBase = `https://firestore.googleapis.com/v1/projects/gunes-english/databases/(default)/documents`;
+
+function makeField(val) {
+  if (typeof val === 'string') return { stringValue: val };
+  if (typeof val === 'number') return { doubleValue: val };
+  if (typeof val === 'boolean') return { booleanValue: val };
+  if (Array.isArray(val)) return { arrayValue: { values: val.map(makeField) } };
+  return { nullValue: null };
+}
+function makeDocument(data) {
+  const fields = {};
+  Object.entries(data).forEach(([k, v]) => { fields[k] = makeField(v); });
+  return { fields };
+}
+
+async function firestorePatch(col, docId, data) {
+  const https = require('https');
+  return new Promise((resolve) => {
+    const bodyStr = JSON.stringify(makeDocument(data));
+    const opts = {
+      hostname: 'firestore.googleapis.com',
+      path: `/v1/projects/gunes-english/databases/(default)/documents/${col}/${docId}`,
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(bodyStr) }
+    };
+    const req = require('https').request(opts, res => {
+      let d = ''; res.on('data', c => d += c);
+      res.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve({}); } });
+    });
+    req.on('error', e => { console.error('[Firestore]', e.message); resolve({}); });
+    req.write(bodyStr); req.end();
+  });
+}
+
+async function firestoreList(col) {
+  return new Promise((resolve) => {
+    const opts = {
+      hostname: 'firestore.googleapis.com',
+      path: `/v1/projects/gunes-english/databases/(default)/documents/${col}?pageSize=200`,
+      method: 'GET',
+    };
+    const req = require('https').request(opts, res => {
+      let d = ''; res.on('data', c => d += c);
+      res.on('end', () => {
+        try {
+          const j = JSON.parse(d);
+          const docs = (j.documents || []).map(doc => {
+            const id = doc.name.split('/').pop();
+            const fields = {};
+            Object.entries(doc.fields || {}).forEach(([k, v]) => {
+              fields[k] = v.stringValue ?? v.doubleValue ?? v.integerValue ?? null;
+            });
+            return { id, ...fields };
+          });
+          resolve(docs);
+        } catch { resolve([]); }
+      });
+    });
+    req.on('error', () => resolve([]));
+    req.end();
+  });
+}
+
+async function writeSessionToFirestore(session) {
+  const meta = session.metadata || {};
+  const packageId = meta.packageId;
+  const studentEmail = meta.studentEmail || session.customer_email || '';
+  const studentName = meta.studentName || 'Öğrenci';
+  const amount = (session.amount_total || 0) / 100;
+  const sessionDate = new Date(session.created * 1000).toISOString();
+  const now = new Date().toISOString();
+  const today = now.slice(0, 10);
+
+  // Package adını Firestore'dan çek
+  const pkgs = await firestoreList('Package');
+  const pkg = pkgs.find(p => p.id === packageId);
+  const pkgName = pkg?.name || meta.packageName || 'Paket';
+
+  // Student ID'yi Firestore'dan bul
+  const students = await firestoreList('Student');
+  const student = students.find(s => s.email === studentEmail);
+  const studentId = student?.id || 's1';
+
+  const suffix = session.id.slice(-12);
+  const invNum = `INV-${new Date(session.created*1000).getFullYear()}-${suffix.slice(-6).toUpperCase()}`;
+
+  const orderData = {
+    student_id: studentId, student_email: studentEmail, student_name: studentName,
+    package_id: packageId, package_name: pkgName,
+    status: 'paid', order_date: sessionDate, amount,
+    stripe_session_id: session.id, created_date: sessionDate, updated_date: now,
+  };
+
+  await firestorePatch('Order', `ord-stripe-${suffix}`, orderData);
+  await firestorePatch('Invoice', `inv-stripe-${suffix}`, {
+    invoice_number: invNum, student_id: studentId, student_name: studentName, student_email: studentEmail,
+    issue_date: today, due_date: today, status: 'paid',
+    subtotal: amount, vat_rate: 0, vat_amount: 0, total_amount: amount, amount,
+    package_id: packageId, source: 'stripe', stripe_session_id: session.id,
+    created_date: sessionDate, updated_date: now,
+  });
+  await firestorePatch('Payment', `pay-stripe-${suffix}`, {
+    student_id: studentId, student_name: studentName, student_email: studentEmail,
+    amount, status: 'paid', payment_date: today,
+    payment_method: 'credit_card', description: pkgName,
+    package_id: packageId, source: 'stripe', stripe_session_id: session.id,
+    created_date: sessionDate, updated_date: now,
+  });
+
+  console.log(`[Sync] ✅ Order/Invoice/Payment created for session ${session.id.slice(-12)} (${studentEmail}, ${pkgName}, £${amount})`);
+}
+
+// ─── Stripe Webhook (otomatik sync) ──────────────────────────
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  let event;
+  try {
+    if (webhookSecret) {
+      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    } else {
+      event = JSON.parse(req.body.toString());
+    }
+  } catch (err) {
+    console.error('[Webhook] Signature error:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    if (session.payment_status === 'paid') {
+      console.log(`[Webhook] Payment received: ${session.id}`);
+      try { await writeSessionToFirestore(session); } catch(e) { console.error('[Webhook] Firestore error:', e.message); }
+    }
+  }
+
+  res.json({ received: true });
+});
+
+// ─── Manual sync endpoint (tüm paid session'ları sync et) ───
+app.post('/api/stripe/sync-all', async (req, res) => {
+  try {
+    const sessions = await stripe.checkout.sessions.list({ limit: 100 });
+    const paidSessions = sessions.data.filter(s => s.payment_status === 'paid');
+
+    // Firestore'daki mevcut Order'ları çek
+    const existingOrders = await firestoreList('Order');
+    const syncedSessions = new Set(existingOrders.map(o => o.stripe_session_id).filter(Boolean));
+
+    const toSync = paidSessions.filter(s => !syncedSessions.has(s.id));
+    console.log(`[Sync] ${paidSessions.length} paid sessions, ${toSync.length} to sync`);
+
+    for (const session of toSync) {
+      await writeSessionToFirestore(session);
+    }
+
+    res.json({ total: paidSessions.length, synced: toSync.length, already_synced: syncedSessions.size });
+  } catch (err) {
+    console.error('[Sync Error]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 // --- Catch-all for unknown API routes ---
 app.all('/api/*', (req, res) => {
   console.log(`[Unhandled] ${req.method} ${req.path}`);
@@ -268,7 +494,7 @@ app.all('/api/*', (req, res) => {
 const PORT = 3044;
 app.listen(PORT, () => {
   console.log(`\n🟢 Gunes CRM Local Backend running on http://localhost:${PORT}`);
-  console.log(`   Demo user: ${DEMO_USER.email} (${DEMO_USER.role})`);
+  console.log(`   Admin: ${ADMIN_USER.email} | Multi-user auth enabled`);
   
   // Check if seed data exists
   const count = db.prepare('SELECT COUNT(*) as c FROM entities').get().c;

@@ -11,7 +11,7 @@ const ROLE_DEFAULTS = {
   accounting:   ['Dashboard', 'Finance', 'Accounting', 'Payroll', 'InvoiceManagement', 'Reports', 'StaffDashboard', 'NotificationCenter'],
   staff:        ['Dashboard', 'Students', 'Tasks', 'StaffDashboard', 'NotificationCenter'],
   user:         ['Dashboard', 'Tasks', 'StaffDashboard', 'NotificationCenter'],
-  student:      ['Dashboard', 'StudentSelfPortal', 'Packages', 'Resources', 'NotificationCenter'],
+  student:      ['Dashboard', 'StudentSelfPortal', 'MyPackages', 'Packages', 'Resources', 'NotificationCenter'],
 };
 
 export function useCurrentUser() {

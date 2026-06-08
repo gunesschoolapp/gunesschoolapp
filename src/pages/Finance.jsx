@@ -117,6 +117,11 @@ export default function Finance() {
     queryFn: () => base44.entities.Student.list(),
   });
 
+  const { data: orders = [] } = useQuery({
+    queryKey: ['paid-orders-finance'],
+    queryFn: () => base44.entities.Order.filter({ status: 'paid' }),
+  });
+
   // Filter by period
   const getFilteredData = (data, dateField) => {
     return data.filter(item => {
@@ -137,9 +142,22 @@ export default function Finance() {
   const filteredPayments = getFilteredData(payments, 'payment_date');
   const filteredExpenses = getFilteredData(expenses, 'date');
   const filteredSalaries = getFilteredData(salaries, 'period');
+  const filteredOrders = orders.filter(o => {
+    const d = (o.order_date || '').slice(0, 10);
+    if (!d) return false;
+    const itemDate = new Date(d);
+    if (isNaN(itemDate.getTime())) return false;
+    if (reportType === 'yearly') return itemDate.getFullYear() === selectedYear;
+    return format(itemDate, 'MMMM yyyy') === selectedPeriod;
+  });
 
-  // Calculate totals
-  const studentPaymentTotal = filteredPayments.filter(p => p.status === 'paid').reduce((s, p) => s + (p.amount || 0), 0);
+  // Stripe session ID'si Payment kaydında yoksa Order'dan da ekle (duplicate önle)
+  const stripeSessionsInFilteredPayments = new Set(filteredPayments.map(p => p.stripe_session_id).filter(Boolean));
+  const orderBasedIncome = filteredOrders
+    .filter(o => !stripeSessionsInFilteredPayments.has(o.stripe_session_id))
+    .reduce((s, o) => s + (o.amount || 0), 0);
+  const paymentBasedIncome = filteredPayments.filter(p => p.status === 'paid').reduce((s, p) => s + (p.amount || 0), 0);
+  const studentPaymentTotal = paymentBasedIncome + orderBasedIncome;
   const teacherSalaryTotal = filteredSalaries.reduce((s, s_) => s + (s_.total_paid || 0), 0);
   const expensesTotal = filteredExpenses.reduce((s, e) => s + (e.amount || 0), 0);
   const netProfit = studentPaymentTotal - teacherSalaryTotal - expensesTotal;

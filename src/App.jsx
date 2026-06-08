@@ -55,9 +55,11 @@ import Personnel from '@/pages/Personnel';
 import PersonnelManagement from '@/pages/PersonnelManagement';
 import Classrooms from '@/pages/Classrooms';
 import Classroom from '@/pages/Classroom';
+import ClassroomDetail from '@/pages/ClassroomDetail';
 import ResourceLibrary from '@/pages/ResourceLibrary';
 import Leads from '@/pages/Leads';
 import Packages from '@/pages/Packages';
+import MyPackages from '@/pages/MyPackages';
 import TeacherResources from '@/pages/TeacherResources';
 
 // Central role-based home redirect
@@ -139,10 +141,12 @@ const AuthenticatedApp = () => {
         <Route path="/PersonnelManagement" element={<PersonnelManagement />} />
         <Route path="/Classrooms" element={<Classrooms />} />
         <Route path="/Classroom" element={<Classroom />} />
+        <Route path="/ClassroomDetail" element={<ClassroomDetail />} />
         <Route path="/NotificationCenter" element={<NotificationCenter />} />
         <Route path="/ResourceLibrary" element={<ResourceLibrary />} />
         <Route path="/Leads" element={<Leads />} />
         <Route path="/Packages" element={<Packages />} />
+        <Route path="/MyPackages" element={<MyPackages />} />
         <Route path="/Resources" element={<TeacherResources />} />
         <Route path="/Profile" element={<UserProfile />} />
       </Route>

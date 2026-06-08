@@ -49,6 +49,7 @@ const ALL_NAV = [
   { path: '/Classroom',        icon: Monitor,         key: 'classroom',        category: 'education', roles: ['admin', 'team_admin', 'teacher'] },
   { path: '/Certifications',   icon: Award,           key: 'certifications',   category: 'education', roles: ['admin', 'team_admin', 'user'] },
   { path: '/Resources',        icon: FileText,        key: 'resources',        category: 'education', roles: ['admin', 'team_admin', 'teacher', 'student'] },
+  { path: '/MyPackages',       icon: BookOpen,        key: 'myPackages',       category: 'education', roles: ['student'] },
   { path: '/Packages',         icon: BookOpen,        key: 'packages',         category: 'education', roles: ['admin', 'team_admin', 'student', 'user'] },
 
   // Finans

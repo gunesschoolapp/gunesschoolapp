@@ -6,8 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   CreditCard, BookOpen, Calendar, CheckCircle, XCircle, Clock,
   AlertCircle, User, MapPin, Award, TrendingUp, Bot, MessageSquare,
-  Bell, Trash2, Check
+  Bell, Trash2, Check, ChevronRight, Video
 } from 'lucide-react';
+import { NotificationService } from '@/lib/NotificationService';
 import AITeacherChat from '@/components/ai-teacher/AITeacherChat';
 import StudentChatPanel from '@/components/chat/StudentChatPanel';
 import { format, parseISO } from 'date-fns';
@@ -15,6 +16,7 @@ import { tr, enUS } from 'date-fns/locale';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/lib/AuthContext';
 
 const levelColors = {
   A1: 'bg-emerald-100 text-emerald-700', A2: 'bg-teal-100 text-teal-700',
@@ -24,6 +26,7 @@ const levelColors = {
 
 export default function StudentSelfPortal() {
   const { language, t } = useLanguage();
+  const { user: authUser } = useAuth();  // AuthContext'ten kullanıcıı al
   const activeLocale = language === 'tr' ? tr : enUS;
 
   const attConfig = {
@@ -53,6 +56,9 @@ export default function StudentSelfPortal() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotificationsDialog, setShowNotificationsDialog] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState([]);
+  const [allPackages, setAllPackages] = useState([]);
+  const [selectedPackage, setSelectedPackage] = useState(null);
 
   const markAsRead = async (notifId) => {
     try {
@@ -78,7 +84,9 @@ export default function StudentSelfPortal() {
   };
 
   useEffect(() => {
-    base44.auth.me().then(async u => {
+    const loadData = async () => {
+      // AuthContext'ten gelen kullanıcıyı kullan (localStorage'dan)
+      const u = authUser || await base44.auth.me().catch(() => null);
       if (!u) { base44.auth.redirectToLogin(window.location.href); return; }
       setUser(u);
 
@@ -108,15 +116,86 @@ export default function StudentSelfPortal() {
           : Promise.resolve(),
       ]);
 
-      const allNotifs = await base44.entities.Notification.list();
-      const myNotifs = allNotifs.filter(n => n.recipient_email === u.email).sort((a, b) => new Date(b.sent_at || 0) - new Date(a.sent_at || 0));
-      setNotifications(myNotifs);
-      setUnreadCount(myNotifs.filter(n => !n.read).length);
+      // Load orders and purchased packages for this student
+      try {
+        // student.id ile Order ara (en güvenilir yol)
+        const allOrders = await base44.entities.Order.list();
+        const myOrders = allOrders.filter(o =>
+          o.student_id === student.id ||
+          o.student_email === u.email ||
+          o.student_email === student.email
+        );
+        setOrders(myOrders);
+
+        // Invoice'lardan da bak
+        const allInvs = await base44.entities.Invoice.list();
+        const myInvs = allInvs.filter(inv =>
+          inv.student_id === student.id ||
+          inv.student_email === u.email ||
+          inv.student_email === student.email
+        );
+        setInvoices(myInvs);
+
+        // Tüm paket ID'lerini topla
+        const pkgIdsFromOrders = myOrders.map(o => o.package_id).filter(Boolean);
+        const pkgIdsFromInvoices = myInvs.map(i => i.package_id).filter(Boolean);
+        const allPkgIds = new Set([...pkgIdsFromOrders, ...pkgIdsFromInvoices]);
+
+        if (allPkgIds.size > 0) {
+          const pkgs = await base44.entities.Package.list();
+          setAllPackages(pkgs.filter(p => allPkgIds.has(p.id)));
+        }
+      } catch (e) { console.warn('Package load error:', e); }
+
+      // Load notifications
+      try {
+        const allNotifs = await base44.entities.Notification.list();
+        const myNotifs = allNotifs
+          .filter(n => n.recipient_email === u.email || n.recipient_email === student.email)
+          .sort((a, b) => new Date(b.sent_at || 0) - new Date(a.sent_at || 0));
+        setNotifications(myNotifs);
+        setUnreadCount(myNotifs.filter(n => !n.read).length);
+      } catch (_) {}
+
       setLoading(false);
-    }).catch(() => {
-      base44.auth.redirectToLogin(window.location.href);
-    });
-  }, []);
+    };
+    loadData();
+  }, [authUser]);
+
+
+  // Auto-send notification 15 min before online/virtual lessons start
+  useEffect(() => {
+    if (!lessons.length || !user) return;
+    const checkLessonNotifications = () => {
+      const now = new Date();
+      const todayStr = format(now, 'yyyy-MM-dd');
+      lessons.forEach(lesson => {
+        if (lesson.date !== todayStr || lesson.status === 'cancelled' || lesson.room !== 'online' || !lesson.start_time) return;
+        const [h, m] = lesson.start_time.split(':').map(Number);
+        const lessonMin = h * 60 + m;
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        const diff = lessonMin - nowMin;
+        if (diff > 0 && diff <= 15) {
+          const notifKey = `lesson_notif_${lesson.id}_${todayStr}`;
+          if (!localStorage.getItem(notifKey)) {
+            const course = courses.find(c => c.id === lesson.course_id);
+            NotificationService.sendLessonReminder({
+              studentEmail: user.email,
+              studentName: user.full_name || user.email,
+              courseName: course?.name || 'Your class',
+              time: lesson.start_time,
+              room: 'Online',
+            }).catch(console.error);
+            localStorage.setItem(notifKey, '1');
+            setUnreadCount(prev => prev + 1);
+          }
+        }
+      });
+    };
+    checkLessonNotifications();
+    const interval = setInterval(checkLessonNotifications, 60_000);
+    return () => clearInterval(interval);
+  }, [lessons, user, courses]);
 
   if (loading) {
     return (
@@ -211,6 +290,40 @@ export default function StudentSelfPortal() {
           </Card>
         </div>
       </div>
+
+      {/* My Packages */}
+      {allPackages.length > 0 && (
+        <div className="max-w-2xl mx-auto px-4 mt-5">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+            🎓 {language === 'tr' ? 'Paketlerim' : 'My Packages'}
+          </h3>
+          <div className="space-y-2">
+            {allPackages.map(pkg => (
+              <Card
+                key={pkg.id}
+                className="cursor-pointer hover:shadow-md transition-all hover:border-primary/40"
+                onClick={() => setSelectedPackage(pkg)}
+              >
+                <CardContent className="p-4 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <BookOpen className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm truncate">{pkg.name}</p>
+                      <p className="text-xs text-muted-foreground">{pkg.duration_hours}h · {pkg.level}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Badge className="bg-emerald-100 text-emerald-700 text-xs border-0">✅ Active</Badge>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Main content */}
       <div className="max-w-2xl mx-auto px-4 mt-5">
@@ -572,6 +685,142 @@ export default function StudentSelfPortal() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Package Detail Dialog */}
+      {selectedPackage && (
+        <Dialog open={!!selectedPackage} onOpenChange={() => setSelectedPackage(null)}>
+          <DialogContent className="max-w-md w-full max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+                <BookOpen className="w-5 h-5 text-primary" />
+                {selectedPackage.name}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-5 mt-2">
+
+              {/* Package Info */}
+              <div className="bg-primary/5 rounded-xl p-4 space-y-3">
+                {selectedPackage.description && (
+                  <p className="text-sm text-muted-foreground">{selectedPackage.description}</p>
+                )}
+                <div className="flex gap-5">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Level</p>
+                    <p className="font-semibold text-sm">{selectedPackage.level}</p>
+                  </div>
+                  {selectedPackage.duration_hours && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Duration</p>
+                      <p className="font-semibold text-sm">{selectedPackage.duration_hours}h</p>
+                    </div>
+                  )}
+                  {selectedPackage.price && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Price</p>
+                      <p className="font-semibold text-sm">£{selectedPackage.price}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Features */}
+              {selectedPackage.features?.filter(Boolean).length > 0 && (
+                <div>
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                    {language === 'tr' ? 'İçerik' : "What's Included"}
+                  </h4>
+                  <ul className="space-y-1.5">
+                    {selectedPackage.features.filter(Boolean).map((f, i) => (
+                      <li key={i} className="flex items-center gap-2 text-sm">
+                        <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* My Courses at this level */}
+              {(() => {
+                const pkgCourses = courses.filter(c =>
+                  c.cefr_level === selectedPackage.level ||
+                  selectedPackage.level === 'All Levels'
+                );
+                if (!pkgCourses.length) return null;
+                return (
+                  <div>
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                      {language === 'tr' ? 'Kurslarım' : 'My Courses'}
+                    </h4>
+                    <div className="space-y-2">
+                      {pkgCourses.map(course => (
+                        <div key={course.id} className="flex items-center gap-3 bg-muted/40 rounded-xl p-3">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <BookOpen className="w-4 h-4 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{course.name}</p>
+                            {course.teacher && (
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <User className="w-3 h-3" />{course.teacher}
+                              </p>
+                            )}
+                          </div>
+                          <Badge className={levelColors[course.cefr_level] || 'bg-gray-100 text-gray-700'}>{course.cefr_level}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Upcoming Virtual (Online) Lessons */}
+              {(() => {
+                const today = format(new Date(), 'yyyy-MM-dd');
+                const virtLessons = lessons
+                  .filter(l => {
+                    const c = courses.find(cx => cx.id === l.course_id);
+                    return (
+                      l.date >= today &&
+                      l.status !== 'cancelled' &&
+                      l.room === 'online' &&
+                      c && (c.cefr_level === selectedPackage.level || selectedPackage.level === 'All Levels')
+                    );
+                  })
+                  .sort((a, b) => a.date.localeCompare(b.date))
+                  .slice(0, 5);
+                if (!virtLessons.length) return null;
+                return (
+                  <div>
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                      <Video className="w-3.5 h-3.5 text-blue-600" />
+                      {language === 'tr' ? 'Sanal Dersler' : 'Virtual Lessons'}
+                    </h4>
+                    <div className="space-y-2">
+                      {virtLessons.map(lesson => {
+                        const course = courses.find(c => c.id === lesson.course_id);
+                        return (
+                          <div key={lesson.id} className="flex items-center gap-3 border border-blue-200 bg-blue-50 rounded-xl p-3">
+                            <div className="w-9 h-9 rounded-xl bg-blue-100 flex flex-col items-center justify-center flex-shrink-0">
+                              <span className="text-blue-700 text-xs font-bold leading-none">{format(parseISO(lesson.date), 'dd')}</span>
+                              <span className="text-blue-500 text-[9px]">{format(parseISO(lesson.date), 'MMM', { locale: activeLocale })}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{course?.name || 'Class'}</p>
+                              <p className="text-xs text-blue-600">🎥 Online · {lesson.start_time}{lesson.end_time ? ` - ${lesson.end_time}` : ''}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

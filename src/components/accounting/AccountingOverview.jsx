@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 export default function AccountingOverview() {
   const { data: payments = [] } = useQuery({ queryKey: ['payments-all'], queryFn: () => base44.entities.Payment.list('-payment_date', 500) });
   const { data: expenses = [] } = useQuery({ queryKey: ['expenses-all'], queryFn: () => base44.entities.Expense.list('-date', 500) });
+  const { data: orders = [] } = useQuery({ queryKey: ['orders-all'], queryFn: () => base44.entities.Order.filter({ status: 'paid' }) });
 
   const monthlyData = useMemo(() => {
     const months = [];
@@ -17,9 +18,21 @@ export default function AccountingOverview() {
       const start = format(startOfMonth(d), 'yyyy-MM-dd');
       const end = format(endOfMonth(d), 'yyyy-MM-dd');
 
-      const income = payments
+      // Payment kayıtları
+      const paymentIncome = payments
         .filter(p => p.status === 'paid' && p.payment_date >= start && p.payment_date <= end)
         .reduce((s, p) => s + (p.amount || 0), 0);
+
+      // Order kayıtları (Stripe) - Payment kaydı yoksa ayrıca say
+      const stripeSessionsInPayments = new Set(payments.map(p => p.stripe_session_id).filter(Boolean));
+      const orderIncome = orders
+        .filter(o => {
+          const d = (o.order_date || '').slice(0, 10);
+          return d >= start && d <= end && !stripeSessionsInPayments.has(o.stripe_session_id);
+        })
+        .reduce((s, o) => s + (o.amount || 0), 0);
+
+      const income = paymentIncome + orderIncome;
 
       const expense = expenses
         .filter(e => e.date >= start && e.date <= end)
@@ -28,12 +41,16 @@ export default function AccountingOverview() {
       months.push({ label, income, expense, profit: income - expense });
     }
     return months;
-  }, [payments, expenses]);
+  }, [payments, expenses, orders]);
 
   const currentMonth = monthlyData[monthlyData.length - 1] || {};
   const prevMonth = monthlyData[monthlyData.length - 2] || {};
 
-  const totalIncome = payments.filter(p => p.status === 'paid').reduce((s, p) => s + (p.amount || 0), 0);
+  const paymentTotal = payments.filter(p => p.status === 'paid').reduce((s, p) => s + (p.amount || 0), 0);
+  // Stripe Order'larından gelenleri Payment'da varsa sayma (duplicate önle)
+  const stripeSessionsInPays = new Set(payments.map(p => p.stripe_session_id).filter(Boolean));
+  const orderTotal = orders.filter(o => !stripeSessionsInPays.has(o.stripe_session_id)).reduce((s, o) => s + (o.amount || 0), 0);
+  const totalIncome = paymentTotal + orderTotal;
   const totalExpense = expenses.reduce((s, e) => s + (e.amount || 0), 0);
   const totalProfit = totalIncome - totalExpense;
 

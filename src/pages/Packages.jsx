@@ -159,40 +159,162 @@ export default function Packages() {
 
   useEffect(() => { loadData(); }, []);
 
-  // Handle Stripe return
+  // Handle Stripe return — user yüklendikten sonra çalışsın
   useEffect(() => {
+    if (!user) return;  // auth yüklenmesini bekle
     if (searchParams.get('success') === 'true') {
       const sessionId = searchParams.get('session_id');
       const packageId = searchParams.get('package_id');
       if (sessionId && packageId) {
-        // Save order to Firestore
-        base44.entities.Order.create({
-          student_id: user?.id,
-          student_email: user?.email,
-          student_name: user?.full_name,
-          package_id: packageId,
-          stripe_session_id: sessionId,
-          status: 'paid',
-          order_date: new Date().toISOString(),
-        }).then(() => {
-          toast({ title: '✅ Payment Successful!', description: 'Your enrollment has been confirmed.' });
-          loadData();
-        });
+        handleStripeSuccess(sessionId, packageId);
       }
     }
     if (searchParams.get('canceled') === 'true') {
       toast({ title: 'Payment Canceled', description: 'You can try again anytime.', variant: 'destructive' });
     }
-  }, [searchParams]);
+  }, [searchParams, user]);  // user değişince de tekrar kontrol et
+
+  const handleStripeSuccess = async (sessionId, packageId) => {
+    try {
+      // 1) Backend'e sync-all isteği at (backend doğrudan Firestore'a yazar)
+      try {
+        const syncRes = await fetch('http://localhost:3044/api/stripe/sync-all', { method: 'POST' });
+        const syncData = await syncRes.json();
+        console.log('[Stripe Sync]', syncData);
+        toast({ title: '✅ Ödeme Alındı!', description: 'Paketiniz hesabınıza tanımlandı.' });
+        loadData();
+        return;
+      } catch (backendErr) {
+        console.warn('[Stripe Sync] Backend unavailable, falling back to client:', backendErr.message);
+      }
+
+      // 2) Fallback: Paketin detaylarını çek
+      const pkgs = await base44.entities.Package.list();
+      const pkg = pkgs.find(p => p.id === packageId);
+      const pkgName = pkg?.name || 'Package';
+      const pkgPrice = parseFloat(pkg?.price || 0);
+      const pkgLevel = pkg?.level || '';
+
+      // 3) Duplicate prevention - list + client-side filter
+      const allExistingOrders = await base44.entities.Order.list();
+      const dupOrder = allExistingOrders.find(o => o.stripe_session_id === sessionId);
+      if (dupOrder) {
+        toast({ title: '✅ Payment already recorded!', description: 'Your enrollment is active.' });
+        loadData();
+        return;
+      }
+
+      // 3) Order oluştur
+      // Gerçek öğrenci kaydını email ile bul
+      let realStudentId = user?.id;
+      let realStudentEmail = user?.email;
+      let realStudentName = user?.full_name;
+      try {
+        const students = await base44.entities.Student.filter({ email: user?.email });
+        if (students.length > 0) {
+          realStudentId = students[0].id;
+          realStudentEmail = students[0].email;
+          realStudentName = students[0].full_name;
+        }
+      } catch (_) {}
+
+      await base44.entities.Order.create({
+        student_id: realStudentId,
+        student_email: realStudentEmail,
+        student_name: realStudentName,
+        package_id: packageId,
+        package_name: pkgName,
+        stripe_session_id: sessionId,
+        status: 'paid',
+        order_date: new Date().toISOString(),
+        amount: pkgPrice,
+      });
+
+      // 4) Invoice oluştur (Faturalar sekmesinde görünsün)
+      const invoiceNumber = `INV-${new Date().getFullYear()}-${String(Date.now()).slice(-5)}`;
+      await base44.entities.Invoice.create({
+        invoice_number: invoiceNumber,
+        student_id: realStudentId,
+        student_name: realStudentName,
+        student_email: realStudentEmail,
+        issue_date: new Date().toISOString().slice(0, 10),
+        due_date: new Date().toISOString().slice(0, 10),
+        status: 'paid',
+        subtotal: pkgPrice,
+        vat_rate: 0,
+        vat_amount: 0,
+        total_amount: pkgPrice,
+        line_items: [{
+          description: pkgName,
+          quantity: 1,
+          unit_price: pkgPrice,
+          total: pkgPrice,
+        }],
+        notes: `Stripe Session: ${sessionId}`,
+        package_id: packageId,
+        source: 'stripe',
+      });
+
+      // 5) Payment kaydı oluştur
+      await base44.entities.Payment.create({
+        student_id: realStudentId,
+        student_name: realStudentName,
+        student_email: realStudentEmail,
+        amount: pkgPrice,
+        status: 'paid',
+        payment_date: new Date().toISOString().slice(0, 10),
+        payment_method: 'credit_card',
+        description: pkgName,
+        package_id: packageId,
+        source: 'stripe',
+        stripe_session_id: sessionId,
+      });
+
+      // 6) Öğrenciyi ilgili kurslara otomatik kaydet
+      if (realStudentId) {
+        try {
+          const allCourses = await base44.entities.Course.filter({});
+          // Paketin level'ıyla eşleşen kursları bul
+          const matchingCourses = allCourses.filter(c =>
+            pkgLevel === 'All Levels' ||
+            (c.cefr_level && (c.cefr_level === pkgLevel || pkgLevel.includes(c.cefr_level)))
+          );
+          // Her eşleşen kursa öğrenciyi ekle
+          await Promise.all(matchingCourses.map(async course => {
+            const enrolled = course.enrolled_students || [];
+            if (!enrolled.includes(realStudentId)) {
+              await base44.entities.Course.update(course.id, {
+                enrolled_students: [...enrolled, realStudentId],
+              });
+            }
+          }));
+        } catch (enrollErr) {
+          console.warn('Auto-enrollment partial error:', enrollErr);
+        }
+      }
+
+      toast({ title: '✅ Payment Successful!', description: `${pkgName} - Enrollment confirmed. Invoice created.` });
+      loadData();
+    } catch (err) {
+      console.error('Stripe success handler error:', err);
+      toast({ title: '✅ Payment Received', description: 'Enrollment processing. Please refresh shortly.', variant: 'default' });
+      loadData();
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const pkgs = await base44.entities.Package.filter({});
+      const pkgs = await base44.entities.Package.list();
       setPackages(pkgs.filter(p => isAdmin || p.status === 'active'));
-      if (isStudent) {
-        const ords = await base44.entities.Order.filter({ student_email: user?.email });
-        setOrders(ords);
+      if (isStudent && user?.email) {
+        // list() + client-side filter - backend filter queries are unreliable
+        const allOrds = await base44.entities.Order.list();
+        const myOrds = allOrds.filter(o =>
+          o.student_email === user.email ||
+          o.student_id === user.id
+        );
+        setOrders(myOrds);
       }
     } catch (err) { console.error(err); }
     setLoading(false);

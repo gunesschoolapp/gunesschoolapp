@@ -6,9 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { Search, UserCheck, Mail, Phone, Globe } from 'lucide-react';
+import { Search, UserCheck, Mail, Phone, Globe, CheckCircle } from 'lucide-react';
 import { format } from 'date-fns';
-import SendEmailDialog from '@/components/email/SendEmailDialog';
 
 const statusColors = {
   new: 'bg-blue-100 text-blue-700',
@@ -25,7 +24,6 @@ export default function FormSubmissions() {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [emailTarget, setEmailTarget] = useState(null);
   const qc = useQueryClient();
 
   const { data: submissions = [], isLoading } = useQuery({
@@ -40,15 +38,26 @@ export default function FormSubmissions() {
 
   const convertToLeadMutation = useMutation({
     mutationFn: async (sub) => {
+      // Lead entity'sine tüm alanları doğru map ederek yaz
       await base44.entities.Lead.create({
-        full_name: sub.full_name, email: sub.email, phone: sub.phone,
-        source: sub.how_did_you_hear === 'website' ? 'website' : 'social_media',
-        interest_level: sub.current_level || 'unknown',
-        notes: sub.message, status: 'new',
+        full_name:      sub.full_name || '',
+        email:          sub.email || '',
+        phone:          sub.phone || '',
+        source:         sub.how_did_you_hear === 'website' ? 'website'
+                        : sub.how_did_you_hear === 'social_media' ? 'social_media'
+                        : sub.how_did_you_hear === 'friend' ? 'referral'
+                        : 'other',
+        interest_level: sub.current_level && sub.current_level !== 'unknown' ? sub.current_level : 'beginner',
+        interested_course: sub.interested_course || '',
+        notes:          sub.message || '',
+        status:         'new',
+        created_date:   new Date().toISOString(),
       });
+      // Başvuruyu 'converted' yap
       await base44.entities.FormSubmission.update(sub.id, { status: 'converted' });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['form-submissions'] }),
+    onError: (err) => console.error('[Lead Convert Error]', err),
   });
 
   const filtered = submissions.filter(s => {
@@ -128,18 +137,31 @@ export default function FormSubmissions() {
                     <p className="text-xs text-muted-foreground mt-2">{sub.created_date ? format(new Date(sub.created_date), 'dd MMM yyyy HH:mm') : ''}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <Button variant="outline" size="sm" className="gap-1" onClick={() => setEmailTarget(sub)}>
-                      <Mail className="w-3 h-3" /> Mail Gönder
-                    </Button>
                     {sub.status === 'new' && (
-                      <Button variant="outline" size="sm" className="gap-1" onClick={() => updateMutation.mutate({ id: sub.id, data: { status: 'contacted' } })}>
+                      <Button
+                        variant="outline" size="sm"
+                        onClick={() => updateMutation.mutate({ id: sub.id, data: { status: 'contacted' } })}
+                        disabled={updateMutation.isPending}
+                      >
                         İletişim Kuruldu
                       </Button>
                     )}
-                    {sub.status !== 'converted' && (
-                      <Button size="sm" className="gap-1" onClick={() => convertToLeadMutation.mutate(sub)}>
-                        <UserCheck className="w-3 h-3" /> Lead'e Dönüştür
+                    {sub.status !== 'converted' ? (
+                      <Button
+                        size="sm" className="gap-1.5"
+                        onClick={() => convertToLeadMutation.mutate(sub)}
+                        disabled={convertToLeadMutation.isPending}
+                      >
+                        {convertToLeadMutation.isPending
+                          ? <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          : <UserCheck className="w-3.5 h-3.5" />
+                        }
+                        Lead'e Dönüştür
                       </Button>
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
+                        <CheckCircle className="w-3.5 h-3.5" /> Dönüştürüldü
+                      </span>
                     )}
                   </div>
                 </div>
@@ -149,14 +171,7 @@ export default function FormSubmissions() {
         </div>
       )}
 
-      {emailTarget && (
-        <SendEmailDialog
-          open={!!emailTarget}
-          onClose={() => setEmailTarget(null)}
-          toEmail={emailTarget.email}
-          toName={emailTarget.full_name}
-        />
-      )}
+
     </div>
   );
 }
