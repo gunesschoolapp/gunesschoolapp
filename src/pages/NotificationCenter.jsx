@@ -15,10 +15,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { NotificationService } from '@/lib/NotificationService';
+import { useLanguage } from '@/lib/LanguageContext';
 
 export default function NotificationCenter() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const role = user?.matched_role || user?.role;
   const isAdmin = ['admin', 'team_admin'].includes(role);
   const [activeTab, setActiveTab] = useState('inbox');
@@ -39,6 +41,11 @@ export default function NotificationCenter() {
   const { data: students = [] } = useQuery({
     queryKey: ['students'],
     queryFn: () => base44.entities.Student.filter({}),
+  });
+
+  const { data: staffList = [] } = useQuery({
+    queryKey: ['staff'],
+    queryFn: () => base44.entities.Staff.filter({}),
   });
 
   // Filter notifications by role
@@ -88,16 +95,16 @@ export default function NotificationCenter() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-3">
             <Bell className="w-7 h-7 text-primary" />
-            Notification Center
+            {t('notificationCenterTitle')}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {isAdmin ? 'Send and manage notifications for students & staff' : 'Your notifications'}
+            {isAdmin ? 'Send and manage notifications for students & staff' : t('yourNotifications')}
           </p>
         </div>
         <div className="flex gap-2">
           {unreadCount > 0 && (
             <Button variant="outline" size="sm" onClick={markAllRead}>
-              <MailOpen className="w-4 h-4 mr-2" /> Mark All Read
+              <MailOpen className="w-4 h-4 mr-2" /> {t('markAllRead')}
             </Button>
           )}
           {isAdmin && (
@@ -140,7 +147,7 @@ export default function NotificationCenter() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="inbox" className="gap-2">
-            <Bell className="w-4 h-4" /> Inbox {unreadCount > 0 && <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-xs">{unreadCount}</Badge>}
+            <Bell className="w-4 h-4" /> {t('inbox')} {unreadCount > 0 && <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-xs">{unreadCount}</Badge>}
           </TabsTrigger>
           {isAdmin && (
             <TabsTrigger value="sent" className="gap-2">
@@ -153,7 +160,7 @@ export default function NotificationCenter() {
           {notifications.filter(n => !n.read).length === 0 ? (
             <div className="text-center py-12">
               <Bell className="w-12 h-12 mx-auto mb-3 text-muted-foreground/20" />
-              <p className="text-muted-foreground">No unread notifications</p>
+              <p className="text-muted-foreground">{t('noNotifications')}</p>
             </div>
           ) : (
             notifications.filter(n => !n.read).map(notif => {
@@ -173,6 +180,11 @@ export default function NotificationCenter() {
                       </div>
                       <p className="text-sm font-medium">{notif.title || notif.notification_type}</p>
                       <p className="text-sm text-muted-foreground mt-0.5 whitespace-pre-line">{notif.message}</p>
+                      {notif.image_url && (
+                        <div className="mt-2 max-w-sm rounded-lg overflow-hidden border border-border">
+                          <img src={notif.image_url} alt={notif.title} className="w-full max-h-48 object-cover cursor-zoom-in hover:opacity-95 transition-opacity" onClick={() => window.open(notif.image_url, '_blank')} />
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 mt-2">
                         <Clock className="w-3 h-3 text-muted-foreground" />
                         <span className="text-xs text-muted-foreground">
@@ -197,7 +209,7 @@ export default function NotificationCenter() {
           {/* Read notifications */}
           {notifications.filter(n => n.read).length > 0 && (
             <>
-              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider pt-4 pb-1">Previously Read</h3>
+              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider pt-4 pb-1">{t('previouslyRead')}</h3>
               {notifications.filter(n => n.read).slice(0, 20).map(notif => {
                 const tc = typeConfig[notif.notification_type] || typeConfig.message;
                 return (
@@ -237,6 +249,11 @@ export default function NotificationCenter() {
                     <div className="flex-1">
                       <p className="text-sm font-medium">{notif.title}</p>
                       <p className="text-sm text-muted-foreground mt-0.5">{notif.message}</p>
+                      {notif.image_url && (
+                        <div className="mt-2 max-w-sm rounded-lg overflow-hidden border border-border">
+                          <img src={notif.image_url} alt={notif.title} className="w-full max-h-48 object-cover cursor-zoom-in hover:opacity-95 transition-opacity" onClick={() => window.open(notif.image_url, '_blank')} />
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
                         <span>To: {notif.recipient_email}</span>
                         <span>•</span>
@@ -257,6 +274,7 @@ export default function NotificationCenter() {
         onClose={() => setShowComposeDialog(false)}
         courses={courses}
         students={students}
+        staffList={staffList}
         user={user}
         onSent={() => {
           queryClient.invalidateQueries({ queryKey: ['notifications'] });
@@ -268,14 +286,18 @@ export default function NotificationCenter() {
 }
 
 // ─── Compose Dialog ─────────────────────────────────────
-function ComposeNotificationDialog({ open, onClose, courses, students, user, onSent }) {
+function ComposeNotificationDialog({ open, onClose, courses, students, staffList = [], user, onSent }) {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [icon, setIcon] = useState('📢');
-  const [targetMode, setTargetMode] = useState('all'); // all | courses | students | both
+  const [targetMode, setTargetMode] = useState('all'); // all | courses | students | staff | both
   const [selectedCourses, setSelectedCourses] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
+  const [selectedStaff, setSelectedStaff] = useState([]);
   const [studentSearch, setStudentSearch] = useState('');
+  const [staffSearch, setStaffSearch] = useState('');
+  const [imageFile, setImageFile] = useState(null);
+  const [isPopup, setIsPopup] = useState(false);
   const [sending, setSending] = useState(false);
 
   const filteredStudents = students.filter(s =>
@@ -283,8 +305,14 @@ function ComposeNotificationDialog({ open, onClose, courses, students, user, onS
     s.email?.toLowerCase().includes(studentSearch.toLowerCase())
   );
 
+  const filteredStaff = staffList.filter(s =>
+    s.full_name?.toLowerCase().includes(staffSearch.toLowerCase()) ||
+    s.email?.toLowerCase().includes(staffSearch.toLowerCase())
+  );
+
   const toggleCourse = (id) => setSelectedCourses(p => p.includes(id) ? p.filter(c => c !== id) : [...p, id]);
   const toggleStudent = (id) => setSelectedStudents(p => p.includes(id) ? p.filter(s => s !== id) : [...p, id]);
+  const toggleStaff = (id) => setSelectedStaff(p => p.includes(id) ? p.filter(s => s !== id) : [...p, id]);
 
   const getRecipientEmails = () => {
     const emails = new Set();
@@ -306,6 +334,16 @@ function ComposeNotificationDialog({ open, onClose, courses, students, user, onS
         if (s?.email) emails.add(s.email);
       });
     }
+    if (targetMode === 'staff') {
+      if (selectedStaff.length === 0) {
+        staffList.forEach(s => { if (s.email) emails.add(s.email); });
+      } else {
+        selectedStaff.forEach(sid => {
+          const s = staffList.find(st => st.id === sid);
+          if (s?.email) emails.add(s.email);
+        });
+      }
+    }
     return [...emails];
   };
 
@@ -316,15 +354,23 @@ function ComposeNotificationDialog({ open, onClose, courses, students, user, onS
 
     setSending(true);
     try {
+      let uploadedUrl = '';
+      if (imageFile) {
+        const uploadRes = await base44.integrations.Core.UploadFile({ file: imageFile });
+        uploadedUrl = uploadRes.file_url || '';
+      }
+
       await NotificationService.sendCustom({
         title,
         message,
         icon,
         recipientEmails: emails,
         sentBy: user?.full_name || 'Admin',
+        image_url: uploadedUrl,
+        is_popup: isPopup,
       });
       alert(`✅ Notification sent to ${emails.length} recipient(s)!`);
-      setTitle(''); setMessage(''); setSelectedCourses([]); setSelectedStudents([]);
+      setTitle(''); setMessage(''); setSelectedCourses([]); setSelectedStudents([]); setSelectedStaff([]); setImageFile(null); setIsPopup(false);
       onSent();
     } catch (err) {
       alert('Error: ' + err.message);
@@ -371,17 +417,52 @@ function ComposeNotificationDialog({ open, onClose, courses, students, user, onS
             <textarea className="w-full border rounded-lg px-3 py-2 text-sm mt-1" rows={3} value={message} onChange={e => setMessage(e.target.value)} placeholder="Write your notification message..." />
           </div>
 
+          {/* Image + Popup Selection */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border rounded-xl p-4 bg-slate-50">
+            <div>
+              <Label className="text-xs font-semibold">Resim Ekle (Yerel Dosya)</Label>
+              <Input
+                type="file"
+                accept="image/*"
+                className="mt-1 cursor-pointer text-xs bg-white"
+                onChange={e => {
+                  const file = e.target.files[0];
+                  if (file) setImageFile(file);
+                }}
+              />
+              {imageFile && (
+                <div className="mt-2 flex items-center justify-between bg-white border px-2 py-1 rounded-md">
+                  <span className="text-xs truncate max-w-[180px] font-medium">{imageFile.name}</span>
+                  <button type="button" onClick={() => setImageFile(null)} className="text-[10px] text-destructive hover:underline font-bold">Kaldır</button>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2 md:pt-6">
+              <input
+                type="checkbox"
+                id="popup_tick"
+                className="w-4 h-4 rounded text-primary border-gray-300 focus:ring-primary cursor-pointer"
+                checked={isPopup}
+                onChange={e => setIsPopup(e.target.checked)}
+              />
+              <Label htmlFor="popup_tick" className="text-xs font-semibold cursor-pointer select-none">
+                Pop-up Duyuru Olarak Göster (Uygulama açılışında ekranı kaplar)
+              </Label>
+            </div>
+          </div>
+
           {/* Target Selection */}
           <div className="border rounded-xl p-4 bg-slate-50">
             <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Recipients</Label>
-            <div className="grid grid-cols-4 gap-2 mt-3 mb-4">
+            <div className="grid grid-cols-5 gap-1.5 mt-3 mb-4">
               {[
-                { v: 'all', l: '🌐 All Students' },
-                { v: 'courses', l: '📚 By Course' },
-                { v: 'students', l: '👤 Students' },
+                { v: 'all', l: '🌐 Students' },
+                { v: 'courses', l: '📚 Course' },
+                { v: 'students', l: '👤 Student' },
+                { v: 'staff', l: '👥 Staff' },
                 { v: 'both', l: '📚+👤 Both' },
               ].map(m => (
-                <button key={m.v} onClick={() => setTargetMode(m.v)} className={`px-3 py-2 rounded-lg text-xs font-medium border transition-all ${targetMode === m.v ? 'bg-primary text-white border-primary' : 'bg-white border-border hover:border-primary/50'}`}>
+                <button key={m.v} onClick={() => setTargetMode(m.v)} className={`px-2 py-2 rounded-lg text-xs font-medium border transition-all ${targetMode === m.v ? 'bg-primary text-white border-primary' : 'bg-white border-border hover:border-primary/50'}`}>
                   {m.l}
                 </button>
               ))}
@@ -406,7 +487,7 @@ function ComposeNotificationDialog({ open, onClose, courses, students, user, onS
 
             {/* Student Selection */}
             {(targetMode === 'students' || targetMode === 'both') && (
-              <div>
+              <div className="mb-4">
                 <Label className="text-xs mb-2 block">Select Students</Label>
                 <div className="relative mb-2">
                   <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-muted-foreground" />
@@ -433,6 +514,42 @@ function ComposeNotificationDialog({ open, onClose, courses, students, user, onS
                       </div>
                       <span className="font-medium">{s.full_name}</span>
                       <span className="text-muted-foreground ml-auto">{s.email}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Staff Selection */}
+            {targetMode === 'staff' && (
+              <div>
+                <Label className="text-xs mb-2 block">Select Teachers & Staff (None selects all)</Label>
+                <div className="relative mb-2">
+                  <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-muted-foreground" />
+                  <input className="w-full border rounded-lg pl-8 pr-3 py-1.5 text-xs" value={staffSearch} onChange={e => setStaffSearch(e.target.value)} placeholder="Search staff/teachers..." />
+                </div>
+                {selectedStaff.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {selectedStaff.map(sid => {
+                      const s = staffList.find(st => st.id === sid);
+                      return (
+                        <span key={sid} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs">
+                          {s?.full_name || sid}
+                          <button onClick={() => toggleStaff(sid)}><X className="w-3 h-3" /></button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+                <div className="max-h-32 overflow-y-auto border rounded-lg bg-white">
+                  {filteredStaff.map(s => (
+                    <button key={s.id} onClick={() => toggleStaff(s.id)} className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left hover:bg-slate-50 border-b last:border-0 ${selectedStaff.includes(s.id) ? 'bg-blue-50' : ''}`}>
+                      <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${selectedStaff.includes(s.id) ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
+                        {selectedStaff.includes(s.id) && <Check className="w-2.5 h-2.5 text-white" />}
+                      </div>
+                      <span className="font-medium">{s.full_name}</span>
+                      <span className="text-muted-foreground ml-auto text-[10px] bg-slate-100 px-1.5 py-0.5 rounded font-bold uppercase">{s.role}</span>
+                      <span className="text-muted-foreground text-xs ml-2">{s.email}</span>
                     </button>
                   ))}
                 </div>

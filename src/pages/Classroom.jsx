@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { NotificationService } from '@/lib/NotificationService';
 import {
   Video, VideoOff, Mic, MicOff, Phone, PhoneOff, Users,
   Copy, Check, ExternalLink, Settings, Globe, Info
@@ -76,6 +77,36 @@ export default function Classroom() {
       status: 'active',
       started_at: new Date().toISOString(),
     });
+
+    // Send notifications to enrolled students
+    if (selectedCourse) {
+      try {
+        const courseStudentIds = course?.enrolled_students || [];
+        const allStudents = await base44.entities.Student.list();
+        const enrolledStudents = allStudents.filter(s => 
+          s.course_id === selectedCourse || courseStudentIds.includes(s.id)
+        );
+
+        const studentEmails = enrolledStudents
+          .map(s => s.email)
+          .filter(email => !!email);
+
+        if (studentEmails.length > 0) {
+          await NotificationService.send({
+            title: 'Sanal Sınıf Başladı! 🎓',
+            message: `"${course?.name || 'Dersiniz'}" için canlı ders oturumu başladı. Katılmak için tıklayın!`,
+            type: 'lesson_reminder',
+            icon: '⏰',
+            recipients: studentEmails,
+            link: '/student-classroom',
+            sent_by: user?.full_name || 'Öğretmen',
+          });
+        }
+      } catch (err) {
+        console.warn('Failed to send class start notifications:', err);
+      }
+    }
+
     setRoomId(id);
     setInCall(true);
   };

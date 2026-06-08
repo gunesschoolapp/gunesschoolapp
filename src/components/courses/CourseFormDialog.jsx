@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
-import { CLASSROOM_OPTIONS } from '@/pages/Classrooms';
+import { useClassroomsQuery, getClassroomOptions } from '@/lib/classrooms';
 
 const defaultCourse = {
   name: '', teacher: '', schedule: '', start_date: '', end_date: '',
@@ -15,6 +15,9 @@ const defaultCourse = {
 };
 
 export default function CourseFormDialog({ open, onOpenChange, course, onSave }) {
+  const { data: classrooms = [] } = useClassroomsQuery();
+  const CLASSROOM_OPTIONS = React.useMemo(() => getClassroomOptions(classrooms), [classrooms]);
+
   const [form, setForm] = useState(course || defaultCourse);
   const [saving, setSaving] = useState(false);
 

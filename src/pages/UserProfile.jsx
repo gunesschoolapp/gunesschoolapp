@@ -10,9 +10,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AlertCircle, Check, Upload, Lock, Mail, ArrowLeft, Shield, Camera } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { useLanguage } from '@/lib/LanguageContext';
 
 export default function UserProfile() {
   const { user, setUser } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState(user?.profile_photo_url || '');
@@ -98,7 +100,7 @@ export default function UserProfile() {
               }
             } catch {}
 
-            setSuccess('Profile photo updated!');
+            setSuccess(t('profilePhotoUpdated'));
             resolve();
           }
         );
@@ -135,7 +137,7 @@ export default function UserProfile() {
         }
       } catch {}
 
-      setSuccess('Profile updated!');
+      setSuccess(t('profileUpdated'));
     } catch (err) {
       setError(err.message || 'Failed to update profile');
     } finally {
@@ -148,9 +150,9 @@ export default function UserProfile() {
     setError('');
     setSuccess('');
 
-    if (!newPassword || !confirmPassword) { setError('Both password fields are required'); return; }
-    if (newPassword.length < 8) { setError('Password must be at least 8 characters'); return; }
-    if (newPassword !== confirmPassword) { setError('Passwords do not match'); return; }
+    if (!newPassword || !confirmPassword) { setError(t('passwordFieldsRequired')); return; }
+    if (newPassword.length < 8) { setError(t('passwordMinLength')); return; }
+    if (newPassword !== confirmPassword) { setError(t('passwordMismatch')); return; }
 
     setLoading(true);
     try {
@@ -158,7 +160,7 @@ export default function UserProfile() {
       const currentUser = JSON.parse(localStorage.getItem('gunes_current_user') || '{}');
       currentUser.password_updated = new Date().toISOString();
       localStorage.setItem('gunes_current_user', JSON.stringify(currentUser));
-      setSuccess('Password changed successfully');
+      setSuccess(t('passwordChangedSuccess'));
       setNewPassword('');
       setConfirmPassword('');
     } catch (err) {
@@ -186,8 +188,8 @@ export default function UserProfile() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">My Profile</h1>
-            <p className="text-sm sm:text-base text-muted-foreground mt-1">Manage your account settings</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">{t('myProfile')}</h1>
+            <p className="text-sm sm:text-base text-muted-foreground mt-1">{t('manageAccountSettings')}</p>
           </div>
         </div>
 
@@ -264,22 +266,22 @@ export default function UserProfile() {
         {/* Profile Info */}
         <Card>
           <CardHeader>
-            <CardTitle>Account Information</CardTitle>
+            <CardTitle>{t('accountInformation')}</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleProfileUpdate} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm">Full Name</Label>
+                  <Label className="text-sm">{t('fullName')}</Label>
                   <Input className="mt-1 text-sm" value={fullName} onChange={e => setFullName(e.target.value)} />
                 </div>
                 <div>
-                  <Label className="text-sm">Email</Label>
+                  <Label className="text-sm">{t('email')}</Label>
                   <Input type="email" className="mt-1 text-sm" value={email} onChange={e => setEmail(e.target.value)} />
                 </div>
               </div>
               <Button type="submit" disabled={loading} className="text-sm">
-                {loading ? 'Saving...' : 'Save Changes'}
+                {loading ? t('saving') : t('saveChanges')}
               </Button>
             </form>
           </CardContent>
@@ -290,7 +292,7 @@ export default function UserProfile() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="w-5 h-5" />
-              My Role & Permissions
+              {t('myRoleAndPermissions')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -301,18 +303,18 @@ export default function UserProfile() {
             ) : userRole ? (
               <div className="space-y-4">
                 <div>
-                  <Label className="text-sm mb-2 block">Role</Label>
+                  <Label className="text-sm mb-2 block">{t('assignedRole')}</Label>
                   <Badge className="text-base py-2 px-3">{userRole.name}</Badge>
                 </div>
                 {userRole.description && (
                   <div>
-                    <Label className="text-sm mb-2 block">Description</Label>
+                    <Label className="text-sm mb-2 block">{t('description')}</Label>
                     <p className="text-sm text-muted-foreground">{userRole.description}</p>
                   </div>
                 )}
                 {userRole.permissions && userRole.permissions.length > 0 && (
                   <div>
-                    <Label className="text-sm mb-3 block">Permissions ({userRole.permissions.length})</Label>
+                    <Label className="text-sm mb-3 block">{t('permissions')} ({userRole.permissions.length})</Label>
                     <div className="flex flex-wrap gap-2">
                       {userRole.permissions.map((permission) => (
                         <Badge key={permission} variant="outline" className="text-xs">
@@ -334,35 +336,35 @@ export default function UserProfile() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Lock className="w-5 h-5" />
-              Change Password
+              {t('changePassword')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handlePasswordChange} className="space-y-3">
               <div>
-                <Label htmlFor="newPassword" className="text-sm">New Password</Label>
+                <Label htmlFor="newPassword" className="text-sm">{t('newPassword')}</Label>
                 <Input
                   id="newPassword"
                   type="password"
-                  placeholder="At least 8 characters"
+                  placeholder={t('passwordPlaceholder')}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="mt-1 text-sm"
                 />
               </div>
               <div>
-                <Label htmlFor="confirmPassword" className="text-sm">Confirm Password</Label>
+                <Label htmlFor="confirmPassword" className="text-sm">{t('confirmPassword')}</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
-                  placeholder="Confirm your password"
+                  placeholder={t('confirmPasswordPlaceholder')}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="mt-1 text-sm"
                 />
               </div>
               <Button type="submit" disabled={loading} className="w-full sm:w-auto text-sm">
-                {loading ? 'Changing...' : 'Change Password'}
+                {loading ? t('changing') : t('changePassword')}
               </Button>
             </form>
           </CardContent>

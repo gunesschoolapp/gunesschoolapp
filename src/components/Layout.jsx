@@ -19,6 +19,7 @@ import MobileBottomNav from '@/components/MobileBottomNav';
 import TeamChatSidebar from '@/components/chat/TeamChatSidebar';
 import QuickActionFAB from '@/components/QuickActionFAB';
 import GlobalSearchBar from '@/components/GlobalSearchBar';
+import { useLanguage } from '@/lib/LanguageContext';
 
 const CATEGORIES = {
   main:       { label: 'Main',        labelTr: 'ANA' },
@@ -84,57 +85,55 @@ export default function Layout() {
   const { logout } = useAuth();
   const [pendingNotifications, setPendingNotifications] = useState(0);
   const [newFormSubmissions, setNewFormSubmissions] = useState(0);
+  const [activePopup, setActivePopup] = useState(null);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   // Auto lesson reminders (runs every 60s for admin)
   useLessonReminder(user);
 
   const role = (user?.matched_role || user?.role) || 'user';
+  const { language, setLanguage, t } = useLanguage();
 
-  // Fetch pending notifications
+  // Fetch pending notifications and pop-ups
   React.useEffect(() => {
     if (user?.email) {
-      base44.entities.Notification.filter({ status: 'pending' })
-        .then(notifications => {
-          setPendingNotifications(notifications?.length || 0);
-        })
-        .catch(() => setPendingNotifications(0));
+      const fetchNotifications = () => {
+        base44.entities.Notification.list()
+          .then(notifications => {
+            const isAdmin = ['admin', 'team_admin'].includes(role);
+            const filtered = notifications.filter(n => {
+              if (isAdmin) return !n.read;
+              return n.recipient_email === user.email && !n.read;
+            });
+            setPendingNotifications(filtered.length);
+
+            // Find first unread popup notification addressed to this user
+            const popupNotif = filtered.find(n => n.is_popup && n.recipient_email === user.email);
+            if (popupNotif) {
+              setActivePopup(popupNotif);
+            } else {
+              setActivePopup(null);
+            }
+          })
+          .catch(() => {
+            setPendingNotifications(0);
+            setActivePopup(null);
+          });
+      };
+
+      fetchNotifications();
+      const interval = setInterval(fetchNotifications, 15000);
+
       base44.entities.FormSubmission.filter({ status: 'new' })
         .then(subs => setNewFormSubmissions(subs?.length || 0))
         .catch(() => setNewFormSubmissions(0));
+
+      return () => clearInterval(interval);
     }
-  }, [user?.email]);
+  }, [user?.email, role]);
 
   const tKey = (key) => {
-    const extras = {
-      dashboard:        'Dashboard',
-      teacherDashboard: 'Dashboard',
-      staffDashboard:   'Dashboard',
-      studentDashboard: 'Dashboard',
-      leads:            'Leads (CRM)',
-      students:         'Students',
-      formSubmissions:  'Web Forms',
-      courses:          'Courses',
-      schedule:         'Schedule',
-      classrooms:       'Classrooms',
-      classroom:        'Virtual Classroom',
-      certifications:   'Certifications',
-      resourceLibrary:  'Resource Library',
-      resources:        'Resources',
-      packages:         'Packages',
-      finance:          'Finance',
-      invoiceManagement:'Invoices',
-      accounting:       'Accounting',
-      payroll:          'Payroll',
-      personnel:        'Personnel',
-      userPermissions:  'User Permissions',
-      teachers:         'Teachers',
-      salesStaff:       'Sales Team',
-      emails:           'Emails',
-      tasks:            'Tasks',
-      reports:          'Reports',
-      settings:         'Settings',
-    };
-    return extras[key] || key;
+    return t(key);
   };
 
   const saveConfig = useCallback((config) => {
@@ -236,18 +235,45 @@ export default function Layout() {
         {/* User info strip */}
         {user && (
           <div className="px-4 py-3 border-b border-sidebar-border">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                {user.profile_photo_url ? (
-                  <img src={user.profile_photo_url} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-xs font-black text-primary">{user.full_name?.charAt(0)?.toUpperCase() || '?'}</span>
-                )}
+            <div className="flex items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  {user.profile_photo_url ? (
+                    <img src={user.profile_photo_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xs font-black text-primary">{user.full_name?.charAt(0)?.toUpperCase() || '?'}</span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-sidebar-foreground truncate leading-none">{user.full_name || user.email}</p>
+                  <Badge className={`text-[9px] px-1.5 py-0 mt-0.5 border ${getRoleBadgeColor(role)}`}>{getRoleLabel(role)}</Badge>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-sidebar-foreground truncate leading-none">{user.full_name || user.email}</p>
-                <Badge className={`text-[9px] px-1.5 py-0 mt-0.5 border ${getRoleBadgeColor(role)}`}>{getRoleLabel(role)}</Badge>
-              </div>
+
+              {role === 'student' && (
+                <div className="flex items-center bg-sidebar-accent/50 p-0.5 rounded-lg border border-sidebar-border flex-shrink-0">
+                  <button
+                    onClick={() => setLanguage('tr')}
+                    className={`px-1.5 py-0.5 text-[10px] font-bold rounded transition-all ${
+                      language === 'tr'
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'text-sidebar-foreground/50 hover:text-sidebar-foreground'
+                    }`}
+                  >
+                    TR
+                  </button>
+                  <button
+                    onClick={() => setLanguage('en')}
+                    className={`px-1.5 py-0.5 text-[10px] font-bold rounded transition-all ${
+                      language === 'en'
+                        ? 'bg-primary text-white shadow-sm'
+                        : 'text-sidebar-foreground/50 hover:text-sidebar-foreground'
+                    }`}
+                  >
+                    EN
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -334,32 +360,32 @@ export default function Layout() {
          </nav>
 
         {/* Bottom actions */}
-         <div className="p-3 border-t border-sidebar-border space-y-2">
-           <Link
-             to="/NotificationCenter"
-             onClick={() => setSidebarOpen(false)}
-             className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors relative ${location.pathname === '/NotificationCenter' ? 'bg-primary text-white' : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60'}`}
+         <div className="p-3 pb-16 lg:pb-3 border-t border-sidebar-border space-y-2 bg-sidebar">
+            <Link
+              to="/NotificationCenter"
+              onClick={() => setSidebarOpen(false)}
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors relative ${location.pathname === '/NotificationCenter' ? 'bg-primary text-white' : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/60'}`}
+            >
+              <Bell className="w-4 h-4" />
+              <span className="flex-1">{t('notifications')}</span>
+              {pendingNotifications > 0 && (
+                <div className="bg-destructive text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">{pendingNotifications}</div>
+              )}
+            </Link>
+           <button
+             onClick={() => logout()}
+             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-sidebar-foreground/60 hover:text-destructive hover:bg-destructive/10 w-full transition-colors"
            >
-             <Bell className="w-4 h-4" />
-             <span className="flex-1">Notifications</span>
-             {pendingNotifications > 0 && (
-               <div className="bg-destructive text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">{pendingNotifications}</div>
-             )}
-           </Link>
-          <button
-            onClick={() => logout()}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-sidebar-foreground/60 hover:text-destructive hover:bg-destructive/10 w-full transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            Sign Out
-          </button>
-        </div>
+             <LogOut className="w-4 h-4" />
+             {t('signOut')}
+           </button>
+         </div>
       </aside>
 
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="h-14 bg-card/80 backdrop-blur border-b border-border flex items-center gap-2 px-3 lg:px-6 flex-shrink-0 min-w-0">
+        <header className="h-14 bg-card/80 backdrop-blur border-b border-border flex items-center gap-2 px-3 lg:px-6 flex-shrink-0 min-w-0 relative z-30">
           <Button variant="ghost" size="icon" className="lg:hidden flex-shrink-0" onClick={() => setSidebarOpen(true)}>
             <Menu className="w-5 h-5" />
           </Button>
@@ -377,6 +403,30 @@ export default function Layout() {
           </div>
           {/* Right side */}
           <div className="flex items-center gap-1.5 flex-shrink-0">
+            {role === 'student' && (
+              <div className="flex items-center bg-muted p-1 rounded-xl border border-border/50 mr-1.5 flex-shrink-0">
+                <button
+                  onClick={() => setLanguage('tr')}
+                  className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all duration-200 ${
+                    language === 'tr'
+                      ? 'bg-background text-foreground shadow-sm font-bold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  TR
+                </button>
+                <button
+                  onClick={() => setLanguage('en')}
+                  className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all duration-200 ${
+                    language === 'en'
+                      ? 'bg-background text-foreground shadow-sm font-bold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  EN
+                </button>
+              </div>
+            )}
             {!['student'].includes(role) && (
               <Button
                 variant="ghost"
@@ -389,15 +439,60 @@ export default function Layout() {
               </Button>
             )}
             {user && <span className="text-sm text-muted-foreground hidden sm:block max-w-[120px] truncate">{user.full_name || user.email}</span>}
-            <Link to="/Profile" className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center border border-primary/20 hover:border-primary/40 transition-colors flex-shrink-0 overflow-hidden">
-              {user?.profile_photo_url ? (
-                <img src={user.profile_photo_url} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-xs font-black text-primary">
-                  {user?.full_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || '?'}
-                </span>
+            <div className="relative flex-shrink-0">
+              <button
+                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center border border-primary/20 hover:border-primary/40 transition-colors flex-shrink-0 overflow-hidden"
+              >
+                {user?.profile_photo_url ? (
+                  <img src={user.profile_photo_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xs font-black text-primary">
+                    {user?.full_name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || '?'}
+                  </span>
+                )}
+              </button>
+
+              {profileMenuOpen && (
+                <>
+                  {/* Backdrop */}
+                  <div className="fixed inset-0 z-40" onClick={() => setProfileMenuOpen(false)} />
+                  
+                  {/* Floating Dropdown */}
+                  <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-card border border-border shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <div className="px-3 py-2.5 border-b border-border/60 mb-1">
+                      <p className="text-sm font-bold text-foreground truncate">{user?.full_name || user?.email}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+                      <div className="mt-1.5">
+                        <Badge className={`text-[9px] px-1.5 py-0 border ${getRoleBadgeColor(role)}`}>
+                          {getRoleLabel(role)}
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    <Link
+                      to="/Profile"
+                      onClick={() => setProfileMenuOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-foreground/80 hover:text-foreground hover:bg-muted transition-colors w-full text-left"
+                    >
+                      <UserCog className="w-4 h-4 text-muted-foreground" />
+                      <span>{t('profile') || 'Profilim'}</span>
+                    </Link>
+                    
+                    <button
+                      onClick={() => {
+                        setProfileMenuOpen(false);
+                        logout();
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors w-full text-left mt-1"
+                    >
+                      <LogOut className="w-4 h-4 text-destructive" />
+                      <span>{t('signOut') || 'Çıkış Yap'}</span>
+                    </button>
+                  </div>
+                </>
               )}
-            </Link>
+            </div>
           </div>
         </header>
 
@@ -413,6 +508,49 @@ export default function Layout() {
       {/* Team Chat Sidebar */}
       {!['student'].includes(role) && (
         <TeamChatSidebar open={chatOpen} onClose={() => setChatOpen(false)} user={user} />
+      )}
+
+      {/* Global Pop-up Announcement Modal */}
+      {activePopup && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-card border border-border/80 shadow-2xl rounded-2xl w-full max-w-md overflow-hidden transform transition-all animate-in zoom-in duration-300">
+            {activePopup.image_url && (
+              <div className="w-full max-h-56 overflow-hidden bg-muted border-b border-border">
+                <img src={activePopup.image_url} alt={activePopup.title} className="w-full h-full object-cover" />
+              </div>
+            )}
+            <div className="p-6">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-xl flex-shrink-0">
+                  {activePopup.notification_type === 'lesson_reminder' ? '⏰' : '📢'}
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-foreground leading-snug">{activePopup.title}</h3>
+                  {activePopup.sent_by && (
+                    <p className="text-xs text-muted-foreground mt-0.5">{language === 'tr' ? 'Gönderen' : 'Sent by'}: {activePopup.sent_by}</p>
+                  )}
+                </div>
+              </div>
+              <p className="text-sm text-foreground/85 whitespace-pre-line leading-relaxed mb-6">
+                {activePopup.message}
+              </p>
+              <Button
+                className="w-full font-bold shadow-lg shadow-primary/20 h-11 rounded-xl"
+                onClick={async () => {
+                  try {
+                    await base44.entities.Notification.update(activePopup.id, { read: true });
+                    setActivePopup(null);
+                    setPendingNotifications(prev => Math.max(0, prev - 1));
+                  } catch (err) {
+                    console.error('Failed to dismiss popup notification:', err);
+                  }
+                }}
+              >
+                {language === 'tr' ? 'Okudum / Kapat' : 'Mark as Read / Dismiss'}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

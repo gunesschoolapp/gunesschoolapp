@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { AlertCircle } from 'lucide-react';
 import { format, addDays, isSameDay, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { CLASSROOM_OPTIONS } from '@/pages/Classrooms';
+import { useClassroomsQuery, getClassroomOptions } from '@/lib/classrooms';
 
 const COURSE_COLORS = [
   { bg: 'bg-blue-100', text: 'text-blue-700', header: 'bg-blue-500' },
@@ -58,6 +58,9 @@ const getConflicts = (lessons, teachers, classrooms) => {
 };
 
 export default function CalendarView({ lessons, courses, teachers, weekDays, onLessonClick, currentTeacher = null, isAdmin = false }) {
+  const { data: classrooms = [] } = useClassroomsQuery();
+  const CLASSROOM_OPTIONS = useMemo(() => getClassroomOptions(classrooms), [classrooms]);
+
   const [filterTeacher, setFilterTeacher] = useState('all');
   const [filterRoom, setFilterRoom] = useState('all');
   const [viewType, setViewType] = useState(currentTeacher && !isAdmin ? 'my_lessons' : 'all'); // 'all' | 'my_lessons'

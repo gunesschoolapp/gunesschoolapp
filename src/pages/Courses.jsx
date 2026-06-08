@@ -62,6 +62,8 @@ export default function Courses() {
     enabled: !!user && (!isTeacherRole || !!teacherName),
   });
 
+  const activeCourse = selectedCourse ? (courses.find(c => c.id === selectedCourse.id) || selectedCourse) : null;
+
   const createMutation = useMutation({
     mutationFn: data => base44.entities.Course.create(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['courses'] }),
@@ -96,20 +98,46 @@ export default function Courses() {
   const addStudentToCourse = async (course, student) => {
     const enrolled = course.enrolled_students || [];
     if (!enrolled.includes(student.id)) {
+      // If student is already enrolled in another course, remove them from that course's enrolled_students list first
+      if (student.course_id && student.course_id !== course.id) {
+        const oldCourse = courses.find(c => c.id === student.course_id);
+        if (oldCourse) {
+          const oldEnrolled = oldCourse.enrolled_students || [];
+          await base44.entities.Course.update(oldCourse.id, {
+            enrolled_students: oldEnrolled.filter(id => id !== student.id)
+          });
+        }
+      }
+
+      // Update new course
       await updateMutation.mutateAsync({
         id: course.id,
         data: { enrolled_students: [...enrolled, student.id] }
       });
+
+      // Update student
+      await base44.entities.Student.update(student.id, { course_id: course.id });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
     }
     setStudentSearch('');
   };
 
   const removeStudentFromCourse = async (course, studentId) => {
     const enrolled = course.enrolled_students || [];
+    // Update course
     await updateMutation.mutateAsync({
       id: course.id,
       data: { enrolled_students: enrolled.filter(id => id !== studentId) }
     });
+
+    // Clear student's course_id
+    const student = students.find(s => s.id === studentId);
+    if (student && student.course_id === course.id) {
+      await base44.entities.Student.update(studentId, { course_id: '' });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+    }
   };
 
   return (
@@ -170,6 +198,7 @@ export default function Courses() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setSelectedCourse(course)}>Manage Students</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => { setEditingCourse(course); setShowForm(true); }}>Edit</DropdownMenuItem>
                           <DropdownMenuItem className="text-destructive" onClick={() => deleteMutation.mutate(course.id)}>
                             <Trash2 className="w-4 h-4 mr-2" /> Delete
@@ -223,67 +252,67 @@ export default function Courses() {
        />
 
        {/* Student Management Dialog */}
-       {selectedCourse && (
-         <Dialog open={!!selectedCourse} onOpenChange={() => setSelectedCourse(null)}>
-           <DialogContent className="max-w-2xl">
-             <DialogHeader>
-               <DialogTitle>{selectedCourse.name} - Student Management</DialogTitle>
-             </DialogHeader>
+        {activeCourse && (
+          <Dialog open={!!activeCourse} onOpenChange={() => setSelectedCourse(null)}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>{activeCourse.name} - Student Management</DialogTitle>
+              </DialogHeader>
 
-             <div className="space-y-4">
-               {/* Add Student */}
-               <div className="space-y-2">
-                 <label className="text-sm font-medium">Add Student</label>
-                 <div className="flex gap-2">
-                   <Input
-                     placeholder="Search students..."
-                     value={studentSearch}
-                     onChange={e => setStudentSearch(e.target.value)}
-                   />
-                 </div>
-                 {studentSearch && (
-                   <div className="border rounded-lg max-h-40 overflow-y-auto">
-                     {students
-                       .filter(s => 
-                         s.full_name.toLowerCase().includes(studentSearch.toLowerCase()) &&
-                         !selectedCourse.enrolled_students?.includes(s.id)
-                       )
-                       .map(s => (
-                         <button
-                           key={s.id}
-                           onClick={() => addStudentToCourse(selectedCourse, s)}
-                           className="w-full text-left px-3 py-2 hover:bg-muted transition-colors text-sm"
-                         >
-                           {s.full_name} <span className="text-xs text-muted-foreground ml-1">({s.email})</span>
-                         </button>
-                       ))}
-                   </div>
-                 )}
-               </div>
+              <div className="space-y-4">
+                {/* Add Student */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Add Student</label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Search students..."
+                      value={studentSearch}
+                      onChange={e => setStudentSearch(e.target.value)}
+                    />
+                  </div>
+                  {studentSearch && (
+                    <div className="border rounded-lg max-h-40 overflow-y-auto">
+                      {students
+                        .filter(s => 
+                          s.full_name.toLowerCase().includes(studentSearch.toLowerCase()) &&
+                          !activeCourse.enrolled_students?.includes(s.id)
+                        )
+                        .map(s => (
+                          <button
+                            key={s.id}
+                            onClick={() => addStudentToCourse(activeCourse, s)}
+                            className="w-full text-left px-3 py-2 hover:bg-muted transition-colors text-sm"
+                          >
+                            {s.full_name} <span className="text-xs text-muted-foreground ml-1">({s.email})</span>
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </div>
 
-               {/* Enrolled Students */}
-               <div className="space-y-2">
-                 <label className="text-sm font-medium">Enrolled Students ({selectedCourse.enrolled_students?.length || 0})</label>
-                 <div className="space-y-2">
-                   {students
-                     .filter(s => selectedCourse.enrolled_students?.includes(s.id))
-                     .map(s => (
-                       <div key={s.id} className="flex items-center justify-between p-2 bg-muted rounded-lg text-sm">
-                         <span>{s.full_name}</span>
-                         <button
-                           onClick={() => removeStudentFromCourse(selectedCourse, s.id)}
-                           className="text-destructive hover:text-destructive/80"
-                         >
-                           <X className="w-4 h-4" />
-                         </button>
-                       </div>
-                     ))}
-                 </div>
-               </div>
-             </div>
-           </DialogContent>
-         </Dialog>
-       )}
+                {/* Enrolled Students */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Enrolled Students ({activeCourse.enrolled_students?.length || 0})</label>
+                  <div className="space-y-2">
+                    {students
+                      .filter(s => activeCourse.enrolled_students?.includes(s.id))
+                      .map(s => (
+                        <div key={s.id} className="flex items-center justify-between p-2 bg-muted rounded-lg text-sm">
+                          <span>{s.full_name}</span>
+                          <button
+                            onClick={() => removeStudentFromCourse(activeCourse, s.id)}
+                            className="text-destructive hover:text-destructive/80"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
       );
       }

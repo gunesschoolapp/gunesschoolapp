@@ -19,7 +19,7 @@ export const NotificationService = {
    * @param {string} [opts.link] - Optional link (e.g. '/Resources')
    * @param {string} [opts.sent_by] - Name of sender
    */
-  async send({ title, message, type = 'announcement', icon = '🔔', recipients = [], link = '', sent_by = 'System' }) {
+  async send({ title, message, type = 'announcement', icon = '🔔', recipients = [], link = '', sent_by = 'System', image_url = '', is_popup = false }) {
     const recipientList = Array.isArray(recipients) ? recipients : [recipients];
 
     const promises = recipientList.map(recipient =>
@@ -35,6 +35,8 @@ export const NotificationService = {
         link,
         sent_by,
         sent_at: new Date().toISOString(),
+        image_url,
+        is_popup,
       })
     );
 
@@ -89,7 +91,7 @@ export const NotificationService = {
   /**
    * Admin custom notification.
    */
-  async sendCustom({ title, message, icon = '📢', recipientEmails, sentBy = 'Admin' }) {
+  async sendCustom({ title, message, icon = '📢', recipientEmails, sentBy = 'Admin', image_url = '', is_popup = false }) {
     return this.send({
       title,
       message,
@@ -97,6 +99,8 @@ export const NotificationService = {
       icon,
       recipients: recipientEmails,
       sent_by: sentBy,
+      image_url,
+      is_popup,
     });
   },
 };

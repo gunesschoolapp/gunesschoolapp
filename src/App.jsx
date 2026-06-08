@@ -1,11 +1,14 @@
+import React, { useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { HashRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Route, Routes, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { App as CapApp } from '@capacitor/app';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import Login from '@/pages/Login';
+import { LanguageProvider } from '@/lib/LanguageContext';
 
 import Layout from '@/components/Layout';
 
@@ -154,16 +157,56 @@ const AuthenticatedApp = () => {
   );
 };
 
+function BackButtonHandler() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    let handler;
+    try {
+      handler = CapApp.addListener('backButton', () => {
+        const path = location.pathname;
+        const isMainPage = path === '/login' || 
+                           path === '/Dashboard' || 
+                           path === '/StudentSelfPortal' || 
+                           path === '/TeacherDashboard' || 
+                           path === '/StaffDashboard' ||
+                           path === '/';
+        
+        if (isMainPage) {
+          CapApp.exitApp();
+        } else {
+          navigate(-1);
+        }
+      });
+    } catch (e) {
+      // Gracefully ignore if not running inside Capacitor
+      console.log('Capacitor App listener not available in this environment');
+    }
+
+    return () => {
+      if (handler) {
+        handler.then(h => h.remove());
+      }
+    };
+  }, [navigate, location]);
+
+  return null;
+}
+
 function App() {
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <AuthenticatedApp />
-        </Router>
-        <Toaster />
-      </QueryClientProvider>
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <QueryClientProvider client={queryClientInstance}>
+          <Router>
+            <BackButtonHandler />
+            <AuthenticatedApp />
+          </Router>
+          <Toaster />
+        </QueryClientProvider>
+      </AuthProvider>
+    </LanguageProvider>
   )
 }
 

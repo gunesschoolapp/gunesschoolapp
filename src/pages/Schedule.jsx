@@ -14,7 +14,7 @@ import {
   Plus, ChevronLeft, ChevronRight, Clock, MapPin, User, BookOpen,
   CheckCircle2, XCircle, Calendar, LayoutGrid, List, Edit, Trash2, AlertCircle
 } from 'lucide-react';
-import { CLASSROOM_OPTIONS } from '@/pages/Classrooms';
+import { useClassroomsQuery, getClassroomOptions } from '@/lib/classrooms';
 import { format, startOfWeek, addDays, isSameDay, parseISO, addWeeks, subWeeks, isToday as dateFnsIsToday } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import CalendarView from '@/components/schedule/CalendarView';
@@ -42,14 +42,18 @@ const DAY_NAMES_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 
 
 const EMPTY_FORM = { course_id: '', date: '', start_time: '', end_time: '', teacher: '', topic: '', room: '', status: 'scheduled', notes: '' };
 
-const getRoomLabel = (roomId) => {
-  const map = { sinif1: 'Classroom 1 (Upper)', sinif2: 'Classroom 2 (Upper)', sinif3: 'Classroom 3 (Lower)' };
-  return map[roomId] || roomId || '—';
-};
-
 export default function Schedule() {
-   const { user } = useAuth();
-   const [currentWeek, setCurrentWeek] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
+  const { user } = useAuth();
+  const { data: classrooms = [] } = useClassroomsQuery();
+  const CLASSROOM_OPTIONS = React.useMemo(() => getClassroomOptions(classrooms), [classrooms]);
+
+  const getRoomLabel = (roomId) => {
+    if (roomId === 'online') return 'Online';
+    const room = classrooms.find(r => r.id === roomId);
+    return room ? `${room.label} (${room.floor})` : roomId || '—';
+  };
+
+  const [currentWeek, setCurrentWeek] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [showForm, setShowForm] = useState(false);
   const [selectedLesson, setSelectedLesson] = useState(null);
   const [editLesson, setEditLesson] = useState(null);

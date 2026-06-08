@@ -1,37 +1,23 @@
-import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { useAuth } from './AuthContext';
 
 // Role-based default page access (fallback when no custom permissions set)
 const ROLE_DEFAULTS = {
   admin:        null, // admin always gets everything — handled by hasPerm logic
   team_admin:   null,
-  teacher:      ['Dashboard', 'Courses', 'Schedule', 'Classrooms', 'Classroom', 'Tasks', 'TeacherLessonTools', 'TeacherDashboard', 'Resources'],
+  teacher:      ['Dashboard', 'Courses', 'Schedule', 'Classrooms', 'Classroom', 'Tasks', 'TeacherLessonTools', 'TeacherDashboard', 'Resources', 'NotificationCenter'],
   receptionist: ['Dashboard', 'Students', 'Courses', 'Schedule', 'Tasks', 'InvoiceManagement', 'NotificationCenter', 'Emails', 'StaffDashboard'],
   reception:    ['Dashboard', 'Students', 'Courses', 'Schedule', 'Tasks', 'InvoiceManagement', 'NotificationCenter', 'Emails', 'StaffDashboard'],
-  marketing:    ['Dashboard', 'Students', 'Courses', 'Tasks', 'Emails', 'StaffDashboard'],
-  accounting:   ['Dashboard', 'Finance', 'Accounting', 'Payroll', 'InvoiceManagement', 'Reports', 'StaffDashboard'],
-  staff:        ['Dashboard', 'Students', 'Tasks', 'StaffDashboard'],
-  user:         ['Dashboard', 'Tasks', 'StaffDashboard'],
-  student:      ['Dashboard', 'StudentSelfPortal', 'Packages', 'Resources'],
+  marketing:    ['Dashboard', 'Students', 'Courses', 'Tasks', 'Emails', 'StaffDashboard', 'NotificationCenter'],
+  accounting:   ['Dashboard', 'Finance', 'Accounting', 'Payroll', 'InvoiceManagement', 'Reports', 'StaffDashboard', 'NotificationCenter'],
+  staff:        ['Dashboard', 'Students', 'Tasks', 'StaffDashboard', 'NotificationCenter'],
+  user:         ['Dashboard', 'Tasks', 'StaffDashboard', 'NotificationCenter'],
+  student:      ['Dashboard', 'StudentSelfPortal', 'Packages', 'Resources', 'NotificationCenter'],
 };
 
 export function useCurrentUser() {
-  const [user, setUser] = useState(null);
-  const [staffRecord, setStaffRecord] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    base44.auth.me().then(async u => {
-      setUser(u);
-      if (u?.email) {
-        try {
-          const results = await base44.entities.Staff.filter({ email: u.email });
-          if (results?.length > 0) setStaffRecord(results[0]);
-        } catch {}
-      }
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, []);
+  const { user, isLoadingAuth } = useAuth();
+  const staffRecord = user?.staff_record || null;
+  const loading = isLoadingAuth;
 
   const effectiveRole = user?.matched_role || user?.role;
 
