@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { auth } from '@/lib/firebase';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut, deleteUser } from 'firebase/auth';
 
 const AuthContext = createContext();
 
@@ -138,6 +138,43 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const deleteAccount = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error("No authenticated user");
+
+    // 1. Delete Firestore records associated with email
+    const email = currentUser.email;
+    if (email) {
+      const { base44 } = await import('@/api/base44Client');
+      const deletePromises = [];
+      
+      const [usersList, userSetupsList, studentsList, teachersList, staffList] = await Promise.all([
+        base44.entities.User.filter({ email }),
+        base44.entities.UserSetup.filter({ email }),
+        base44.entities.Student.filter({ email }),
+        base44.entities.Teacher.filter({ email }),
+        base44.entities.Staff.filter({ email }),
+      ]);
+
+      usersList.forEach(u => deletePromises.push(base44.entities.User.delete(u.id)));
+      userSetupsList.forEach(us => deletePromises.push(base44.entities.UserSetup.delete(us.id)));
+      studentsList.forEach(s => deletePromises.push(base44.entities.Student.delete(s.id)));
+      teachersList.forEach(t => deletePromises.push(base44.entities.Teacher.delete(t.id)));
+      staffList.forEach(st => deletePromises.push(base44.entities.Staff.delete(st.id)));
+
+      await Promise.all(deletePromises);
+    }
+
+    // 2. Delete Firebase Auth User
+    await deleteUser(currentUser);
+
+    // 3. Clear local storage and state
+    localStorage.removeItem('gunes_current_user');
+    setUser(null);
+    setIsAuthenticated(false);
+    setAuthError(null);
+  };
+
   const navigateToLogin = () => {
     window.location.href = '/login';
   };
@@ -152,7 +189,8 @@ export const AuthProvider = ({ children }) => {
       authError,
       appPublicSettings,
       logout,
-      navigateToLogin
+      navigateToLogin,
+      deleteAccount
     }}>
       {children}
     </AuthContext.Provider>

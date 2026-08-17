@@ -8,13 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, Check, Upload, Lock, Mail, ArrowLeft, Shield, Camera } from 'lucide-react';
+import { AlertCircle, Check, Upload, Lock, Mail, ArrowLeft, Shield, Camera, Trash2, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useLanguage } from '@/lib/LanguageContext';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export default function UserProfile() {
-  const { user, setUser } = useAuth();
-  const { t } = useLanguage();
+  const { user, setUser, deleteAccount } = useAuth();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState(user?.profile_photo_url || '');
@@ -29,6 +30,10 @@ export default function UserProfile() {
   const [userRole, setUserRole] = useState(null);
   const [roleLoading, setRoleLoading] = useState(true);
   const fileRef = useRef(null);
+
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [confirmEmailInput, setConfirmEmailInput] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     const fetchUserRole = async () => {
@@ -167,6 +172,38 @@ export default function UserProfile() {
       setError(err.message || 'Failed to change password');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async (e) => {
+    e.preventDefault();
+    if (confirmEmailInput.trim().toLowerCase() !== user.email.toLowerCase()) {
+      setError(language === 'tr' ? 'E-posta adresi eşleşmiyor.' : 'Email address does not match.');
+      return;
+    }
+
+    setDeleteLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      await deleteAccount();
+      setSuccess(t('deleteAccountSuccess'));
+      setShowDeleteDialog(false);
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
+    } catch (err) {
+      console.error('Account deletion error:', err);
+      let errMsg = err.message || '';
+      if (err.code === 'auth/requires-recent-login') {
+        setError(t('deleteAccountRequiresRecentLogin'));
+      } else {
+        setError(t('deleteAccountError') + errMsg);
+      }
+      setShowDeleteDialog(false);
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -369,6 +406,92 @@ export default function UserProfile() {
             </form>
           </CardContent>
         </Card>
+
+        {/* Danger Zone / Delete Account */}
+        <Card className="border-red-200 bg-red-50/10">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="w-5 h-5 text-red-600" />
+              {t('deleteAccount')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              {language === 'tr' 
+                ? 'Hesabınızı ve hesabınızla ilişkili tüm verileri kalıcı olarak silin.' 
+                : 'Permanently delete your account and all data associated with it.'}
+            </p>
+            <Button 
+              variant="destructive" 
+              onClick={() => {
+                setConfirmEmailInput('');
+                setShowDeleteDialog(true);
+              }}
+              className="text-sm shadow-md hover:shadow-red-500/20"
+            >
+              {t('deleteAccount')}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Delete Account Dialog */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent className="max-w-md w-full">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-600 font-bold">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+                {t('deleteAccountWarningTitle')}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 mt-2">
+              <p className="text-sm text-foreground/80 leading-relaxed">
+                {t('deleteAccountWarningDesc')}
+              </p>
+              
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800">
+                {language === 'tr'
+                  ? 'Eğer Google hesabı ile giriş yaptıysanız ve bu işlem hata verirse, güvenlik nedeniyle çıkış yapıp tekrar giriş yapmanız ve bu işlemi hemen tekrarlamanız gerekir.'
+                  : 'If you signed in with a Google account and this operation fails, you must log out and sign in again for security reasons, then immediately retry this.'}
+              </div>
+
+              <div>
+                <Label className="text-xs text-muted-foreground block mb-1">
+                  {t('deleteAccountConfirmInput')} <strong className="text-foreground">{user.email}</strong>
+                </Label>
+                <Input
+                  type="email"
+                  className="text-sm mt-1"
+                  placeholder={user.email}
+                  value={confirmEmailInput}
+                  onChange={(e) => setConfirmEmailInput(e.target.value)}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 text-sm" 
+                  onClick={() => setShowDeleteDialog(false)}
+                  disabled={deleteLoading}
+                >
+                  {t('cancel')}
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  className="flex-1 text-sm font-bold" 
+                  onClick={handleDeleteAccount}
+                  disabled={confirmEmailInput.trim().toLowerCase() !== user.email.toLowerCase() || deleteLoading}
+                >
+                  {deleteLoading ? (
+                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                  ) : (
+                    t('deleteAccountButton')
+                  )}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

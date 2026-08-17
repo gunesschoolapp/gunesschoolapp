@@ -111,6 +111,15 @@ export const translations = {
     confirmPasswordPlaceholder: 'Şifrenizi onaylayın',
     saving: 'Kaydediliyor...',
     changing: 'Değiştiriliyor...',
+    deleteAccount: 'Hesabı Sil',
+    deleteAccountWarningTitle: 'Hesabınızı Silmek İstediğinize Emin Misiniz?',
+    deleteAccountWarningDesc: 'Bu işlem geri alınamaz. Hesabınızla ilişkili tüm bilgileriniz, kayıtlarınız ve ayarlarınız kalıcı olarak silinecektir.',
+    deleteAccountConfirmInput: 'Onaylamak için lütfen e-posta adresinizi yazın:',
+    deleteAccountButton: 'Hesabımı Kalıcı Olarak Sil',
+    deleteAccountSuccess: 'Hesabınız başarıyla silindi.',
+    deleteAccountError: 'Hesap silinirken hata oluştu: ',
+    deleteAccountRequiresRecentLogin: 'Güvenlik nedeniyle, hesabınızı silmeden önce yakın zamanda giriş yapmış olmalısınız. Lütfen çıkış yapıp tekrar giriş yapın ve tekrar deneyin.',
+    cancel: 'İptal',
   },
   en: {
     // Navigation / Layout
@@ -224,5 +233,14 @@ export const translations = {
     confirmPasswordPlaceholder: 'Confirm your password',
     saving: 'Saving...',
     changing: 'Changing...',
+    deleteAccount: 'Delete Account',
+    deleteAccountWarningTitle: 'Are you sure you want to delete your account?',
+    deleteAccountWarningDesc: 'This action cannot be undone. All your information, records, and settings associated with your account will be permanently deleted.',
+    deleteAccountConfirmInput: 'Please type your email address to confirm:',
+    deleteAccountButton: 'Permanently Delete My Account',
+    deleteAccountSuccess: 'Your account has been deleted successfully.',
+    deleteAccountError: 'Error deleting account: ',
+    deleteAccountRequiresRecentLogin: 'For security reasons, you must have logged in recently before deleting your account. Please sign out, sign in again, and try once more.',
+    cancel: 'Cancel',
   }
 };
