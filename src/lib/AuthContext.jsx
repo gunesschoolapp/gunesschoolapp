@@ -1,5 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 
 const AuthContext = createContext();
 
@@ -12,34 +14,42 @@ export const AuthProvider = ({ children }) => {
   const [appPublicSettings, setAppPublicSettings] = useState({ id: 'local', public_settings: { name: 'Gunes CRM' } });
 
   useEffect(() => {
-    checkAppState();
-  }, []);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      try {
+        setIsLoadingAuth(true);
+        if (firebaseUser) {
+          // Check localStorage first as a quick cache/fallback
+          const savedUserStr = localStorage.getItem('gunes_current_user');
+          const savedUser = savedUserStr ? JSON.parse(savedUserStr) : null;
+          
+          const currentUser = {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            full_name: firebaseUser.displayName || savedUser?.full_name || firebaseUser.email.split('@')[0],
+            role: savedUser?.role || 'user',
+          };
 
-  const checkAppState = async () => {
-    try {
-      setIsLoadingAuth(true);
-      setAuthError(null);
-
-      // Check localStorage for saved user session
-      const savedUser = localStorage.getItem('gunes_current_user');
-      if (!savedUser) {
-        // No user logged in — show login page
+          await enrichUser(currentUser);
+        } else {
+          // Logged out
+          localStorage.removeItem('gunes_current_user');
+          setUser(null);
+          setIsAuthenticated(false);
+          setAuthError(null);
+          setIsLoadingAuth(false);
+        }
+      } catch (error) {
+        console.error('Auth state change handler error:', error);
         setIsLoadingAuth(false);
-        setIsAuthenticated(false);
-        return;
       }
+    });
 
-      const currentUser = JSON.parse(savedUser);
-      await enrichUser(currentUser);
-    } catch (error) {
-      console.error('Auth error:', error);
-      setAuthError({ type: 'unknown', message: error.message || 'An error occurred' });
-      setIsLoadingAuth(false);
-    }
-  };
+    return () => unsubscribe();
+  }, []);
 
   const enrichUser = async (currentUser) => {
     try {
+      const { base44 } = await import('@/api/base44Client');
       const enrichedUser = { ...currentUser };
 
       // Match user email with Student/Teacher/Staff records
@@ -50,39 +60,82 @@ export const AuthProvider = ({ children }) => {
           base44.entities.Staff.filter({ email: currentUser.email }),
         ]);
 
-        if (currentUser.role === 'student' && students.length > 0) {
+        if (students.length > 0) {
           enrichedUser.matched_role = 'student';
           enrichedUser.student_record = students[0];
-        } else if (currentUser.role === 'teacher' && teachers.length > 0) {
+          enrichedUser.role = 'student';
+        } else if (teachers.length > 0) {
           enrichedUser.matched_role = 'teacher';
           enrichedUser.teacher_record = teachers[0];
+          enrichedUser.role = 'teacher';
         } else if (staff.length > 0) {
-          enrichedUser.matched_role = staff[0].roles?.[0] || currentUser.role;
+          enrichedUser.matched_role = staff[0].roles?.[0] || 'staff';
           enrichedUser.staff_record = staff[0];
+          enrichedUser.role = staff[0].roles?.[0] || 'staff';
         } else {
-          enrichedUser.matched_role = currentUser.role || 'admin';
+          // Check if this is the fallback admin email
+          if (currentUser.email === 'admin@gunesenglish.com') {
+            enrichedUser.matched_role = 'admin';
+            enrichedUser.role = 'admin';
+          } else {
+            // Automatically create a new student record in Firestore!
+            const newStudent = await base44.entities.Student.create({
+              email: currentUser.email,
+              full_name: currentUser.full_name || currentUser.email.split('@')[0],
+              status: 'enrolled',
+              enrollment_date: new Date().toISOString().split('T')[0],
+              phone: '',
+              cefr_level: 'A1'
+            });
+            enrichedUser.matched_role = 'student';
+            enrichedUser.student_record = newStudent;
+            enrichedUser.role = 'student';
+          }
         }
       } catch (matchError) {
+        if (matchError.message === 'user_not_registered') {
+          throw matchError;
+        }
         console.error('Email matching failed:', matchError);
         enrichedUser.matched_role = currentUser.role || 'user';
       }
 
       setUser(enrichedUser);
       setIsAuthenticated(true);
+      setAuthError(null);
+      localStorage.setItem('gunes_current_user', JSON.stringify(enrichedUser));
       setIsLoadingAuth(false);
     } catch (error) {
       console.error('User enrichment failed:', error);
-      setIsLoadingAuth(false);
+      if (error.message === 'user_not_registered') {
+        setAuthError({ type: 'user_not_registered', message: 'E-posta adresi Güneş English School sisteminde kayıtlı değil.' });
+      } else {
+        setAuthError({ type: 'unknown', message: error.message || 'An error occurred' });
+      }
+      
+      // Force sign out from Firebase since they are unauthorized
+      await signOut(auth);
+      localStorage.removeItem('gunes_current_user');
+      setUser(null);
       setIsAuthenticated(false);
+      setIsLoadingAuth(false);
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('gunes_current_user');
-    setUser(null);
-    setIsAuthenticated(false);
-    // Navigate to login
-    window.location.href = '/login';
+  const logout = async () => {
+    try {
+      setIsLoadingAuth(true);
+      await signOut(auth);
+    } catch (e) {
+      console.error("Sign out error", e);
+    } finally {
+      localStorage.removeItem('gunes_current_user');
+      setUser(null);
+      setIsAuthenticated(false);
+      setAuthError(null);
+      setIsLoadingAuth(false);
+      window.location.href = '/login';
+    }
   };
 
   const navigateToLogin = () => {
@@ -99,8 +152,7 @@ export const AuthProvider = ({ children }) => {
       authError,
       appPublicSettings,
       logout,
-      navigateToLogin,
-      checkAppState
+      navigateToLogin
     }}>
       {children}
     </AuthContext.Provider>

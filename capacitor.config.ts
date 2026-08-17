@@ -5,20 +5,13 @@ const config: CapacitorConfig = {
   appName: 'Gunes English School',
   webDir: 'dist',
   plugins: {
-    SplashScreen: {
-      launchShowDuration: 2000,
-      launchAutoHide: true,
-      backgroundColor: '#1e3a5f',
-      showSpinner: true,
-      spinnerColor: '#3b82f6',
-    },
-    StatusBar: {
-      style: 'DARK',
-      backgroundColor: '#1e3a5f',
-    },
+
     Keyboard: {
       resize: 'body',
       resizeOnFullScreen: true,
+    },
+    GoogleSignIn: {
+      clientId: '438062176512-e4iqdc3g40uv02jd5rmk2i153hd0c43d.apps.googleusercontent.com',
     },
   },
 };

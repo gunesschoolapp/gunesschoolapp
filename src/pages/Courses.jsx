@@ -90,8 +90,9 @@ export default function Courses() {
 
   const isTeacher = currentTeacher?.length > 0;
   const canManageCourse = (course) => {
-    if (user?.role === 'admin') return true;
-    if (isTeacher && course.teacher === currentTeacher[0]?.full_name) return true;
+    const role = user?.role || user?.matched_role;
+    if (['admin', 'team_admin', 'reception', 'receptionist', 'staff'].includes(role)) return true;
+    if (isTeacher) return true; // Allow teachers to manage enrollments
     return false;
   };
 

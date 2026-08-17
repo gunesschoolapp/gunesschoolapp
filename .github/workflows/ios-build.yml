@@ -1,0 +1,66 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [ main, master, development ]
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    name: Build iOS App (Unsigned)
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Web Project
+        run: npm run build
+
+      - name: Sync Capacitor iOS
+        run: npx cap sync ios
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: ios/App/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('**/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Install Pods
+        run: |
+          cd ios/App
+          pod install
+
+      - name: Build Xcode (.app bundle)
+        run: |
+          xcodebuild -workspace ios/App/App.xcworkspace \
+                     -scheme App \
+                     -configuration Debug \
+                     -sdk iphoneos \
+                     -derivedDataPath build \
+                     CODE_SIGNING_ALLOWED=NO \
+                     CODE_SIGNING_REQUIRED=NO \
+                     clean build
+
+      - name: Compress Build Artifact
+        run: |
+          cd ios/App/build/Build/Products/Debug-iphoneos
+          zip -r ../../../../../GunesEnglishSchool-iOS-Debug.zip App.app
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-debug-app
+          path: GunesEnglishSchool-iOS-Debug.zip
+          retention-days: 7

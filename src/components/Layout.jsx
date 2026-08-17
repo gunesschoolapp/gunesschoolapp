@@ -8,6 +8,7 @@ import {
   BarChart3, Banknote, DollarSign, MapPin, Bell, Monitor, FileText, Shield, MessageSquare
 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { Capacitor } from '@capacitor/core';
 import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/lib/useCurrentUser';
 import { useAuth } from '@/lib/AuthContext';
@@ -94,6 +95,19 @@ export default function Layout() {
 
   const role = (user?.matched_role || user?.role) || 'user';
   const { language, setLanguage, t } = useLanguage();
+
+  const platform = Capacitor.getPlatform();
+  const topPadding = platform === 'android'
+    ? '28px'
+    : platform === 'ios'
+      ? 'env(safe-area-inset-top, 44px)'
+      : '0px';
+
+  const headerHeight = platform === 'android'
+    ? 'calc(3.5rem + 28px)'
+    : platform === 'ios'
+      ? 'calc(3.5rem + env(safe-area-inset-top, 44px))'
+      : '3.5rem';
 
   // Fetch pending notifications and pop-ups
   React.useEffect(() => {
@@ -210,11 +224,16 @@ export default function Layout() {
       )}
 
       {/* Sidebar */}
-      <aside className={`
-        fixed lg:static inset-y-0 left-0 z-50 w-64 bg-sidebar text-sidebar-foreground
-        transform transition-transform duration-300 ease-in-out flex flex-col
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-      `}>
+      <aside 
+        style={{
+          paddingTop: sidebarOpen && platform !== 'web' ? topPadding : '0px'
+        }}
+        className={`
+          fixed lg:static inset-y-0 left-0 z-50 w-64 bg-sidebar text-sidebar-foreground
+          transform transition-transform duration-300 ease-in-out flex flex-col
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        `}
+      >
         {/* Logo */}
         <div className="p-5 border-b border-sidebar-border">
           <div className="flex items-center justify-between">
@@ -386,7 +405,13 @@ export default function Layout() {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="h-14 bg-card/80 backdrop-blur border-b border-border flex items-center gap-2 px-3 lg:px-6 flex-shrink-0 min-w-0 relative z-30">
+        <header 
+          style={{ 
+            paddingTop: topPadding,
+            height: headerHeight
+          }}
+          className="bg-card/80 backdrop-blur border-b border-border flex items-center gap-2 px-3 lg:px-6 flex-shrink-0 min-w-0 relative z-30"
+        >
           <Button variant="ghost" size="icon" className="lg:hidden flex-shrink-0" onClick={() => setSidebarOpen(true)}>
             <Menu className="w-5 h-5" />
           </Button>

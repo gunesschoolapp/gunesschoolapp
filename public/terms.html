@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terms of Service - Kullanım Koşulları | Gunes English School</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    :root {
+      --primary: #1e3a5f;
+      --primary-hover: #12253f;
+      --bg-main: #f8fafc;
+      --bg-card: #ffffff;
+      --text-main: #334155;
+      --text-dark: #0f172a;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+    }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+    
+    .card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      padding: 40px;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .logo {
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: var(--text-dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .logo-dot {
+      width: 12px;
+      height: 12px;
+      background-color: #3b82f6;
+      border-radius: 50%;
+    }
+    
+    .lang-switcher {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .lang-switcher button {
+      background: transparent;
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    
+    .lang-switcher button.active {
+      background-color: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    
+    h1 {
+      font-size: 1.8rem;
+      color: var(--text-dark);
+      margin-top: 0;
+    }
+    
+    h2 {
+      font-size: 1.25rem;
+      color: var(--text-dark);
+      margin-top: 30px;
+      margin-bottom: 15px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 5px;
+    }
+    
+    p, li {
+      font-size: 0.95rem;
+      color: var(--text-main);
+    }
+    
+    ul {
+      padding-left: 20px;
+    }
+    
+    li {
+      margin-bottom: 8px;
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 0.875rem;
+      color: var(--text-light);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <div class="logo">
+          <div class="logo-dot"></div>
+          Güneş English
+        </div>
+        <div class="lang-switcher">
+          <button id="btn-tr" class="active" onclick="switchLang('tr')">Türkçe</button>
+          <button id="btn-en" onclick="switchLang('en')">English</button>
+        </div>
+      </div>
+
+      <!-- TURKISH CONTENT -->
+      <div id="lang-tr">
+        <h1>Kullanım Koşulları</h1>
+        <p>Son Güncelleme: 31 Temmuz 2026</p>
+        <p>Güneş English School uygulamasına hoş geldiniz. Bu uygulamayı indirerek, erişerek veya kullanarak, bu Kullanım Koşullarına bağlı kalmayı kabul etmiş olursunuz. Koşulları kabul etmiyorsanız lütfen uygulamayı kullanmayın.</p>
+
+        <h2>1. Hizmet Kapsamı ve Hesap Güvenliği</h2>
+        <p>Uygulamamız, Güneş English School bünyesinde eğitim alan öğrencilere, velilere ve eğitmenlere sınıf yönetimi, ders programı, devam takip, faturalandırma ve eğitim materyalleri erişimi hizmetleri sunar.</p>
+        <ul>
+          <li><strong>Hesap Sorumluluğu:</strong> Hesabınızın giriş bilgilerinin (e-posta, şifre ve PIN kodları) gizliliğini korumak sizin sorumluluğunuzdadır.</li>
+          <li><strong>Doğru Bilgi Beyanı:</strong> Kayıt sırasında doğru, güncel ve eksiksiz bilgi vermeyi kabul edersiniz.</li>
+        </ul>
+
+        <h2>2. Paket Satın Alımları ve Ödemeler</h2>
+        <p>Uygulama üzerinden ders paketleri ve eğitim abonelikleri satın alınabilir:</p>
+        <ul>
+          <li><strong>Ödemeler:</strong> Tüm ödeme işlemleri Stripe altyapısı kullanılarak güvenli bir şekilde gerçekleştirilir.</li>
+          <li><strong>İptal ve İade:</strong> Satın alınan paketlerin iptal, ders telafisi ve iade süreçleri Güneş English School'un kurumsal politikalarına ve imzalanan eğitim sözleşmesine tabidir.</li>
+        </ul>
+
+        <h2>3. Fikri Mülkiyet</h2>
+        <p>Uygulama içindeki tüm logolar, metinler, kodlar, tasarımlar, grafikler ve eğitim materyalleri (çalışma kağıtları, müfredatlar vb.) Güneş English School'un fikri mülkiyetidir ve izinsiz kopyalanamaz, dağıtılamaz veya ticari amaçlarla kullanılamaz.</p>
+
+        <h2>4. Kabul Edilebilir Kullanım ve Kısıtlamalar</h2>
+        <p>Uygulamayı kullanırken aşağıdakileri yapmayacağınızı kabul edersiniz:</p>
+        <ul>
+          <li>Hizmeti kesintiye uğratacak saldırılarda veya veri kazıma (scraping) faaliyetlerinde bulunmak,</li>
+          <li>Uygulama içi mesajlaşma alanlarında diğer üyeleri rahatsız edecek, taciz edecek veya yasa dışı içerikler paylaşmak,</li>
+          <li>Kendinizi başka bir kullanıcı veya personel olarak tanıtmak.</li>
+        </ul>
+
+        <h2>5. Sorumluluğun Sınırlandırılması</h2>
+        <p>Uygulama "olduğu gibi" sunulmaktadır. Güneş English School, uygulamanın kesintisiz veya hatasız çalışacağını garanti etmez. Teknik aksaklıklardan kaynaklanan veri kayıplarından veya dolaylı zararlardan sorumlu tutulamaz.</p>
+
+        <h2>6. Değişiklikler</h2>
+        <p>Bu Kullanım Koşullarını dilediğimiz zaman güncelleme hakkını saklı tutarız. Güncellemeler yayınlandığı andan itibaren geçerlilik kazanır.</p>
+
+        <h2>7. İletişim</h2>
+        <p>Kullanım Koşulları ile ilgili sorularınız için bizimle iletişime geçebilirsiniz:</p>
+        <p><strong>E-posta:</strong> info@gunesenglish.com</p>
+      </div>
+
+      <!-- ENGLISH CONTENT -->
+      <div id="lang-en" style="display: none;">
+        <h1>Terms of Service</h1>
+        <p>Last Updated: July 31, 2026</p>
+        <p>Welcome to the Güneş English School application. By downloading, accessing, or using this app, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use the application.</p>
+
+        <h2>1. Service Scope and Account Security</h2>
+        <p>Our app provides students, parents, and instructors of Güneş English School with access to classroom management, schedules, attendance tracking, invoicing, and educational materials.</p>
+        <ul>
+          <li><strong>Account Responsibility:</strong> You are responsible for maintaining the confidentiality of your login credentials (email, password, and PIN codes).</li>
+          <li><strong>Accurate Information:</strong> You agree to provide accurate, current, and complete information during registration.</li>
+        </ul>
+
+        <h2>2. Purchases and Payments</h2>
+        <p>Lesson packages and educational subscriptions can be purchased through the app:</p>
+        <ul>
+          <li><strong>Payments:</strong> All transactions are securely processed via the Stripe payment gateway.</li>
+          <li><strong>Cancellation & Refunds:</strong> Cancellation, make-up lessons, and refund rules are subject to the official corporate policies of Güneş English School and the signed educational agreement.</li>
+        </ul>
+
+        <h2>3. Intellectual Property</h2>
+        <p>All logos, texts, code, designs, graphics, and educational materials (worksheets, curricula, etc.) within the app are the intellectual property of Güneş English School and may not be copied, distributed, or used for commercial purposes without prior permission.</p>
+
+        <h2>4. Acceptable Use and Restrictions</h2>
+        <p>When using the app, you agree not to:</p>
+        <ul>
+          <li>Engage in hacking, scraping, or operations that disrupt the application's infrastructure,</li>
+          <li>Post harassing, offensive, or illegal content in community chat or messaging areas,</li>
+          <li>Impersonate another user, student, or staff member.</li>
+        </ul>
+
+        <h2>5. Limitation of Liability</h2>
+        <p>The application is provided "as is" without warranties of any kind. Güneş English School does not guarantee that the services will be uninterrupted or error-free and shall not be liable for any indirect damages or data loss due to technical failures.</p>
+
+        <h2>6. Modifications to Terms</h2>
+        <p>We reserve the right to modify these Terms of Service at any time. Changes will become effective immediately upon posting.</p>
+
+        <h2>7. Contact Us</h2>
+        <p>If you have any questions about these Terms of Service, please contact us at:</p>
+        <p><strong>Email:</strong> info@gunesenglish.com</p>
+      </div>
+
+      <div class="footer">
+        &copy; 2026 Güneş English School. All rights reserved.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function switchLang(lang) {
+      if (lang === 'tr') {
+        document.getElementById('lang-tr').style.display = 'block';
+        document.getElementById('lang-en').style.display = 'none';
+        document.getElementById('btn-tr').classList.add('active');
+        document.getElementById('btn-en').classList.remove('active');
+        document.documentElement.lang = 'tr';
+      } else {
+        document.getElementById('lang-tr').style.display = 'none';
+        document.getElementById('lang-en').style.display = 'block';
+        document.getElementById('btn-tr').classList.remove('active');
+        document.getElementById('btn-en').classList.add('active');
+        document.documentElement.lang = 'en';
+      }
+    }
+  </script>
+</body>
+</html>

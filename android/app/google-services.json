@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "438062176512",
+    "project_id": "gunes-english",
+    "storage_bucket": "gunes-english.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:438062176512:android:2607dbfd25fa6981c9bbe5",
+        "android_client_info": {
+          "package_name": "com.gunesenglish.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "438062176512-e4iqdc3g40uv02jd5rmk2i153hd0c43d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4oXkHAOfZjdzyUmV96V6gjoHJB3mWWVc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "438062176512-e4iqdc3g40uv02jd5rmk2i153hd0c43d.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

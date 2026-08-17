@@ -369,7 +369,11 @@ async function firestoreList(col) {
             const id = doc.name.split('/').pop();
             const fields = {};
             Object.entries(doc.fields || {}).forEach(([k, v]) => {
-              fields[k] = v.stringValue ?? v.doubleValue ?? v.integerValue ?? null;
+              if (v.arrayValue && v.arrayValue.values) {
+                fields[k] = v.arrayValue.values.map(val => val.stringValue ?? val.doubleValue ?? val.integerValue ?? val.booleanValue ?? null).filter(val => val !== null);
+              } else {
+                fields[k] = v.stringValue ?? v.doubleValue ?? v.integerValue ?? v.booleanValue ?? null;
+              }
             });
             return { id, ...fields };
           });
@@ -392,10 +396,11 @@ async function writeSessionToFirestore(session) {
   const now = new Date().toISOString();
   const today = now.slice(0, 10);
 
-  // Package adını Firestore'dan çek
+  // Package adını ve seviyesini Firestore'dan çek
   const pkgs = await firestoreList('Package');
   const pkg = pkgs.find(p => p.id === packageId);
   const pkgName = pkg?.name || meta.packageName || 'Paket';
+  const pkgLevel = pkg?.level || '';
 
   // Student ID'yi Firestore'dan bul
   const students = await firestoreList('Student');
@@ -428,7 +433,29 @@ async function writeSessionToFirestore(session) {
     created_date: sessionDate, updated_date: now,
   });
 
-  console.log(`[Sync] ✅ Order/Invoice/Payment created for session ${session.id.slice(-12)} (${studentEmail}, ${pkgName}, £${amount})`);
+  // Öğrenciyi ilgili kurslara otomatik kaydet
+  if (studentId) {
+    try {
+      const allCourses = await firestoreList('Course');
+      const matchingCourses = allCourses.filter(c =>
+        pkgLevel === 'All Levels' ||
+        (c.cefr_level && (c.cefr_level === pkgLevel || pkgLevel.includes(c.cefr_level)))
+      );
+      for (const course of matchingCourses) {
+        const enrolled = course.enrolled_students || [];
+        if (!enrolled.includes(studentId)) {
+          await firestorePatch('Course', course.id, {
+            enrolled_students: [...enrolled, studentId]
+          });
+          console.log(`[Sync] Enrolled student ${studentId} into course ${course.id}`);
+        }
+      }
+    } catch (enrollErr) {
+      console.warn('[Sync] Auto-enrollment error:', enrollErr.message);
+    }
+  }
+
+  console.log(`[Sync] ✅ Order/Invoice/Payment created and student enrolled for session ${session.id.slice(-12)} (${studentEmail}, ${pkgName}, £${amount})`);
 }
 
 // ─── Stripe Webhook (otomatik sync) ──────────────────────────

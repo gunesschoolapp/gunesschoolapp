@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Deletion Request - Veri Silme Talebi | Gunes English School</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    :root {
+      --primary: #c2410c;
+      --primary-hover: #9a3412;
+      --bg-main: #f8fafc;
+      --bg-card: #ffffff;
+      --text-main: #334155;
+      --text-dark: #0f172a;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+    }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+    
+    .card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      padding: 40px;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .logo {
+      font-weight: 700;
+      font-size: 1.5rem;
+      color: var(--text-dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .logo-dot {
+      width: 12px;
+      height: 12px;
+      background-color: var(--primary);
+      border-radius: 50%;
+    }
+    
+    .lang-switcher {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .lang-switcher button {
+      background: transparent;
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    
+    .lang-switcher button.active {
+      background-color: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    
+    h1 {
+      font-size: 1.8rem;
+      color: var(--text-dark);
+      margin-top: 0;
+    }
+    
+    h2 {
+      font-size: 1.25rem;
+      color: var(--text-dark);
+      margin-top: 30px;
+      margin-bottom: 15px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 5px;
+    }
+    
+    p, li {
+      font-size: 0.95rem;
+      color: var(--text-main);
+    }
+    
+    ul {
+      padding-left: 20px;
+    }
+    
+    li {
+      margin-bottom: 8px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: var(--text-dark);
+      font-size: 0.9rem;
+    }
+    
+    input[type="text"], input[type="email"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      box-sizing: border-box;
+    }
+    
+    .btn-submit {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
+      transition: background-color 0.2s ease;
+      font-family: inherit;
+      text-align: center;
+      display: inline-block;
+      text-decoration: none;
+    }
+    
+    .btn-submit:hover {
+      background-color: var(--primary-hover);
+    }
+    
+    .template-box {
+      background-color: var(--bg-main);
+      border: 1px solid var(--border);
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 20px;
+      position: relative;
+    }
+    
+    .btn-copy {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background-color: white;
+      border: 1px solid var(--border);
+      padding: 4px 8px;
+      font-size: 0.8rem;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    
+    .btn-copy:hover {
+      background-color: var(--bg-main);
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 0.875rem;
+      color: var(--text-light);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <div class="logo">
+          <div class="logo-dot"></div>
+          Güneş English
+        </div>
+        <div class="lang-switcher">
+          <button id="btn-tr" class="active" onclick="switchLang('tr')">Türkçe</button>
+          <button id="btn-en" onclick="switchLang('en')">English</button>
+        </div>
+      </div>
+
+      <!-- TURKISH CONTENT -->
+      <div id="lang-tr">
+        <h1>Veri ve Hesap Silme Talebi</h1>
+        <p>Son Güncelleme: 31 Temmuz 2026</p>
+        <p>Güneş English School olarak gizliliğinize ve kişisel verilerinizin kontrolüne saygı duyuyoruz. Mobil uygulamamızı kullanmayı bırakmak ve hesabınızla ilişkili tüm verileri silmek isterseniz, bu talebinizi kolayca iletebilirsiniz.</p>
+
+        <h2>Neler Silinir?</h2>
+        <p>Silme talebiniz onaylandığında veritabanlarımızdan aşağıdaki veriler kalıcı olarak kaldırılır veya anonimleştirilir:</p>
+        <ul>
+          <li>Kullanıcı adı, e-posta adresi, telefon numarası ve şifre gibi profil bilgileriniz,</li>
+          <li>Devam takip kayıtları, ödev gönderimleri ve diğer akademik etkinlik geçmişiniz,</li>
+          <li>Uygulama içi ayarlarınız ve bildirim tercihleriniz.</li>
+        </ul>
+        <p><em>Not: Fatura geçmişi ve yasal ödeme kayıtları, vergi mevzuatı ve mali yükümlülükler gereği yasal saklama süreleri boyunca muhafaza edilir.</em></p>
+
+        <h2>Nasıl Talep Edilir?</h2>
+        <p>Hesap ve veri silme talebinizi aşağıdaki yöntemlerden biriyle yapabilirsiniz:</p>
+        <ol>
+          <li><strong>Uygulama İçi:</strong> Profil sayfanızdaki "Hesabımı Sil" butonunu kullanarak doğrudan talep oluşturabilirsiniz.</li>
+          <li><strong>E-posta ile:</strong> Kayıtlı e-posta adresinizden aşağıdaki taslağı doldurarak <strong>info@gunesenglish.com</strong> adresine talep gönderebilirsiniz.</li>
+        </ol>
+
+        <h2>E-posta ile Talep Gönderin</h2>
+        <div class="form-group">
+          <label for="tr-name">Adınız Soyadınız:</label>
+          <input type="text" id="tr-name" placeholder="Örn. Ahmet Yılmaz" oninput="updateTrMail()">
+        </div>
+        <div class="form-group">
+          <label for="tr-email">Uygulamaya Kayıtlı E-posta Adresiniz:</label>
+          <input type="email" id="tr-email" placeholder="Örn. ahmet@gmail.com" oninput="updateTrMail()">
+        </div>
+        
+        <div class="template-box">
+          <button class="btn-copy" onclick="copyTemplate('tr')">Kopyala</button>
+          <strong>Konu:</strong> Gunes English School Hesap Silme Talebi<br><br>
+          <span id="tr-template-text">
+            Merhaba Güneş English School Ekibi,<br><br>
+            Uygulamanızda kullandığım hesabın ve ilişkili tüm kişisel verilerimin kalıcı olarak silinmesini talep ediyorum.<br><br>
+            Kayıtlı İsim: [Ad Soyad]<br>
+            Kayıtlı E-posta: [E-posta]<br><br>
+            Gereğini rica ederim.
+          </span>
+        </div>
+        <br>
+        <a href="mailto:info@gunesenglish.com?subject=Gunes English School Hesap Silme Talebi" id="tr-mailto-btn" class="btn-submit">E-posta Uygulamasını Aç ve Gönder</a>
+      </div>
+
+      <!-- ENGLISH CONTENT -->
+      <div id="lang-en" style="display: none;">
+        <h1>Account & Data Deletion Request</h1>
+        <p>Last Updated: July 31, 2026</p>
+        <p>At Güneş English School, we respect your privacy and control over your personal data. If you wish to stop using our mobile application and permanently delete your account and all associated data, you can request it easily here.</p>
+
+        <h2>What Data is Deleted?</h2>
+        <p>Once your deletion request is processed, the following information will be permanently deleted from our databases or fully anonymized:</p>
+        <ul>
+          <li>Profile information including your name, email, phone number, and password,</li>
+          <li>Attendance history, homework submissions, and other class activity records,</li>
+          <li>Application settings and notification preferences.</li>
+        </ul>
+        <p><em>Note: Invoice history and financial records are retained for legally required retention periods in accordance with tax laws and financial regulations.</em></p>
+
+        <h2>How to Request Deletion?</h2>
+        <p>You can request account and data deletion in two ways:</p>
+        <ol>
+          <li><strong>In-App:</strong> Go to your Profile settings screen inside the app and click the "Delete Account" button.</li>
+          <li><strong>By Email:</strong> Send a deletion request to <strong>info@gunesenglish.com</strong> from your registered email address using the template below.</li>
+        </ol>
+
+        <h2>Submit Request via Email</h2>
+        <div class="form-group">
+          <label for="en-name">Your Full Name:</label>
+          <input type="text" id="en-name" placeholder="e.g. John Doe" oninput="updateEnMail()">
+        </div>
+        <div class="form-group">
+          <label for="en-email">Registered Email Address:</label>
+          <input type="email" id="en-email" placeholder="e.g. john.doe@example.com" oninput="updateEnMail()">
+        </div>
+        
+        <div class="template-box">
+          <button class="btn-copy" onclick="copyTemplate('en')">Copy</button>
+          <strong>Subject:</strong> Gunes English School Account Deletion Request<br><br>
+          <span id="en-template-text">
+            Hello Güneş English School Team,<br><br>
+            I would like to request the permanent deletion of my account and all associated personal data from your systems.<br><br>
+            Registered Name: [Full Name]<br>
+            Registered Email: [Email]<br><br>
+            Best regards.
+          </span>
+        </div>
+        <br>
+        <a href="mailto:info@gunesenglish.com?subject=Gunes English School Account Deletion Request" id="en-mailto-btn" class="btn-submit">Open Mail Client & Send</a>
+      </div>
+
+      <div class="footer">
+        &copy; 2026 Güneş English School. All rights reserved.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function switchLang(lang) {
+      if (lang === 'tr') {
+        document.getElementById('lang-tr').style.display = 'block';
+        document.getElementById('lang-en').style.display = 'none';
+        document.getElementById('btn-tr').classList.add('active');
+        document.getElementById('btn-en').classList.remove('active');
+        document.documentElement.lang = 'tr';
+      } else {
+        document.getElementById('lang-tr').style.display = 'none';
+        document.getElementById('lang-en').style.display = 'block';
+        document.getElementById('btn-tr').classList.remove('active');
+        document.getElementById('btn-en').classList.add('active');
+        document.documentElement.lang = 'en';
+      }
+    }
+
+    function updateTrMail() {
+      const name = document.getElementById('tr-name').value || '[Ad Soyad]';
+      const email = document.getElementById('tr-email').value || '[E-posta]';
+      
+      const template = `Merhaba Güneş English School Ekibi,<br><br>Uygulamanızda kullandığım hesabın ve ilişkili tüm kişisel verilerimin kalıcı olarak silinmesini talep ediyorum.<br><br>Kayıtlı İsim: ${name}<br>Kayıtlı E-posta: ${email}<br><br>Gereğini rica ederim.`;
+      document.getElementById('tr-template-text').innerHTML = template;
+      
+      const plainText = `Merhaba Güneş English School Ekibi,\n\nUygulamanızda kullandığım hesabın ve ilişkili tüm kişisel verilerimin kalıcı olarak silinmesini talep ediyorum.\n\nKayıtlı İsim: ${name}\nKayıtlı E-posta: ${email}\n\nGereğini rica ederim.`;
+      document.getElementById('tr-mailto-btn').href = `mailto:info@gunesenglish.com?subject=Gunes English School Hesap Silme Talebi&body=${encodeURIComponent(plainText)}`;
+    }
+
+    function updateEnMail() {
+      const name = document.getElementById('en-name').value || '[Full Name]';
+      const email = document.getElementById('en-email').value || '[Email]';
+      
+      const template = `Hello Güneş English School Team,<br><br>I would like to request the permanent deletion of my account and all associated personal data from your systems.<br><br>Registered Name: ${name}<br>Registered Email: ${email}<br><br>Best regards.`;
+      document.getElementById('en-template-text').innerHTML = template;
+      
+      const plainText = `Hello Güneş English School Team,\n\nI would like to request the permanent deletion of my account and all associated personal data from your systems.\n\nRegistered Name: ${name}\nRegistered Email: ${email}\n\nBest regards.`;
+      document.getElementById('en-mailto-btn').href = `mailto:info@gunesenglish.com?subject=Gunes English School Account Deletion Request&body=${encodeURIComponent(plainText)}`;
+    }
+
+    function copyTemplate(lang) {
+      const elementId = lang === 'tr' ? 'tr-template-text' : 'en-template-text';
+      const text = document.getElementById(elementId).innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        alert(lang === 'tr' ? 'Taslak kopyalandı!' : 'Template copied!');
+      });
+    }
+  </script>
+</body>
+</html>
