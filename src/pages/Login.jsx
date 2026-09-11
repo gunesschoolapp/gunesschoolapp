@@ -28,15 +28,11 @@ export default function Login() {
 
       let firebaseUser;
       if (Capacitor.isNativePlatform()) {
-        // Native Google Sign-In via Capawesome
-        try {
-          await GoogleSignIn.initialize({
-            clientId: '438062176512-e4iqdc3g40uv02jd5rmk2i153hd0c43d.apps.googleusercontent.com'
-          });
-        } catch (initErr) {
-          console.log('Google Sign-In already initialized or failed to init:', initErr);
-        }
-        const result = await GoogleSignIn.signIn({});
+        const WEB_CLIENT_ID = '438062176512-e4iqdc3g40uv02jd5rmk2i153hd0c43d.apps.googleusercontent.com';
+        await GoogleSignIn.initialize({
+          clientId: WEB_CLIENT_ID
+        });
+        const result = await GoogleSignIn.signIn();
         if (!result.idToken) {
           throw new Error('Google giriş kimliği (ID Token) alınamadı.');
         }
@@ -54,10 +50,8 @@ export default function Login() {
     } catch (err) {
       console.error('Google login error:', err);
       let msg = err.message || 'Google ile giriş yapılırken bir hata oluştu.';
-      if (msg.includes('user-cancelled') || msg.includes('popup-closed-by-user')) {
-        msg = 'Giriş işlemi iptal edildi.';
-      } else if (msg.includes('No credentials available')) {
-        msg = 'Cihazınızda tanımlı bir Google hesabı (Gmail) bulunamadı. Lütfen önce cihaz ayarlarına girerek bir Google hesabı ekleyin ve tekrar deneyin.';
+      if (msg.includes('No credentials available')) {
+        msg = 'Cihazınızda tanımlı bir Google hesabı (Gmail) bulunamadı. Lütfen cihaz ayarlarına girerek bir Google hesabı ekleyin ve tekrar deneyin.';
       }
       setError(msg);
     } finally {

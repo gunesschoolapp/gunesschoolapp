@@ -4,4 +4,6 @@
     <string name="title_activity_main">Gunes English School</string>
     <string name="package_name">com.gunesenglish.app</string>
     <string name="custom_url_scheme">com.gunesenglish.app</string>
+    <string name="server_client_id">438062176512-e4iqdc3g40uv02jd5rmk2i153hd0c43d.apps.googleusercontent.com</string>
 </resources>
+

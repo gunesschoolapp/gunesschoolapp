@@ -178,7 +178,8 @@ export default function Packages() {
     try {
       // 1) Backend'e sync-all isteği at (backend doğrudan Firestore'a yazar)
       try {
-        const syncRes = await fetch('http://localhost:3044/api/stripe/sync-all', { method: 'POST' });
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://gunes-english.web.app';
+        const syncRes = await fetch(`${backendUrl}/api/stripe/sync-all`, { method: 'POST' });
         const syncData = await syncRes.json();
         console.log('[Stripe Sync]', syncData);
         toast({ title: '✅ Ödeme Alındı!', description: 'Paketiniz hesabınıza tanımlandı.' });
@@ -341,10 +342,13 @@ export default function Packages() {
     loadData();
   };
 
+  const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://gunes-english.web.app';
+
   const handleBuy = async (pkg) => {
     setBuying(true);
     try {
-      const res = await fetch('/api/stripe/create-checkout-session', {
+      const endpoint = `${BACKEND_URL}/api/stripe/create-checkout-session`;
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -356,14 +360,25 @@ export default function Packages() {
           packageId: pkg.id,
         }),
       });
+
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok || !contentType.includes('application/json')) {
+        throw new Error(`Ödeme sunucusuna ulaşılamadı (${res.status}). Lütfen bağlantınızı ve sunucuyu kontrol edin.`);
+      }
+
       const data = await res.json();
       if (data.url) {
-        window.location.href = data.url;
+        if (Capacitor.isNativePlatform()) {
+          window.open(data.url, '_system');
+        } else {
+          window.location.href = data.url;
+        }
       } else {
-        throw new Error(data.error || 'Failed to create checkout session');
+        throw new Error(data.error || 'Ödeme oturumu oluşturulamadı.');
       }
     } catch (err) {
-      toast({ title: 'Payment Error', description: err.message, variant: 'destructive' });
+      toast({ title: 'Ödeme Hatası', description: err.message, variant: 'destructive' });
+    } finally {
       setBuying(false);
     }
   };

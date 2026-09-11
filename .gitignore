@@ -16,6 +16,7 @@ dist
 dist-ssr
 *.local
 local-backend/node_modules
+functions/node_modules
 local-backend/*.db
 
 # Editor directories and files

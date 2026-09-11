@@ -14,6 +14,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "438062176512-9u2lje1198uls7hbkagujl22hbi3l723.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.gunesenglish.app",
+            "certificate_hash": "4193117f8d9589c590d39a745f1816dac146cbe2"
+          }
+        },
+        {
+          "client_id": "438062176512-ucl21fdnjb23neduioabl2f6aqeu05pv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.gunesenglish.app",
+            "certificate_hash": "c8cc23f8f6bdab115043e42541c9e2e756c4e2cc"
+          }
+        },
+        {
           "client_id": "438062176512-e4iqdc3g40uv02jd5rmk2i153hd0c43d.apps.googleusercontent.com",
           "client_type": 3
         }
