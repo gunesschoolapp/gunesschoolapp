@@ -5,6 +5,10 @@ import { useAuth } from '@/lib/AuthContext';
 import { Package, Plus, Trash2, Edit2, ShoppingCart, Check, X, Clock, BookOpen, Users, Zap, Star, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import { Capacitor } from '@capacitor/core';
+
+// App Store kuralları (3.1.1): iOS'ta uygulama içi Stripe satışı ve fiyat gösterimi yok
+const IS_IOS = Capacitor.getPlatform() === 'ios';
 
 const ICONS = { BookOpen, Users, Zap, Star, Crown, Package };
 const ICON_NAMES = ['BookOpen', 'Users', 'Zap', 'Star', 'Crown', 'Package'];
@@ -115,8 +119,8 @@ function PackageCard({ pkg, isStudent, onBuy, buying }) {
       <h3 className="text-lg font-bold text-foreground">{pkg.name}</h3>
       <p className="text-sm text-muted-foreground mt-1 mb-4 flex-1">{pkg.description}</p>
       <div className="mb-4">
-        <span className={`text-3xl font-black ${color.text}`}>£{pkg.price}</span>
-        <span className="text-sm text-muted-foreground ml-1">/ {pkg.duration_hours}h</span>
+        {!IS_IOS && <span className={`text-3xl font-black ${color.text}`}>£{pkg.price}</span>}
+        <span className="text-sm text-muted-foreground ml-1">{IS_IOS ? `${pkg.duration_hours}h` : `/ ${pkg.duration_hours}h`}</span>
       </div>
       <div className="text-xs font-medium text-muted-foreground uppercase mb-2">Level: {pkg.level}</div>
       <ul className="space-y-2 mb-6">
@@ -127,7 +131,7 @@ function PackageCard({ pkg, isStudent, onBuy, buying }) {
           </li>
         ))}
       </ul>
-      {isStudent && (
+      {isStudent && !IS_IOS && (
         <Button
           onClick={() => onBuy(pkg)}
           disabled={buying}
@@ -345,6 +349,7 @@ export default function Packages() {
   const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'https://gunes-english.web.app';
 
   const handleBuy = async (pkg) => {
+    if (IS_IOS) return;
     setBuying(true);
     try {
       const endpoint = `${BACKEND_URL}/api/stripe/create-checkout-session`;
@@ -395,7 +400,9 @@ export default function Packages() {
             {isStudent ? 'Course Packages' : 'Manage Packages'}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {isStudent ? 'Browse and enroll in our course packages' : 'Create and manage course packages for students'}
+            {isStudent
+              ? (IS_IOS ? 'Course packages offered by our school' : 'Browse and enroll in our course packages')
+              : 'Create and manage course packages for students'}
           </p>
         </div>
         {isAdmin && !showForm && (

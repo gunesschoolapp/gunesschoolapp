@@ -82,7 +82,25 @@ export default function StudentProfile() {
     queryFn: () => base44.entities.Attendance.filter({ student_id: id }).catch(() => []),
   });
 
+  const { data: packages = [] } = useQuery({
+    queryKey: ['packages'],
+    queryFn: () => base44.entities.Package.list(),
+  });
+
+  // Öğrencinin paket siparişleri (Stripe + elle tanımlanan) — MyPackages ile aynı eşleştirme
+  const { data: studentOrders = [] } = useQuery({
+    queryKey: ['student-orders', id, student?.email],
+    queryFn: () => base44.entities.Order.list().then(items => items
+      .filter(o => o.student_id === id || (student?.email && o.student_email === student.email))
+      .sort((a, b) => new Date(b.order_date || 0) - new Date(a.order_date || 0))),
+    enabled: !!student,
+  });
+
   const qc = useQueryClient();
+  const [showAssignPackage, setShowAssignPackage] = useState(false);
+  const [assignForm, setAssignForm] = useState({
+    package_id: '', payment_method: 'cash', order_date: format(new Date(), 'yyyy-MM-dd'), notes: ''
+  });
   const [showNewPaymentDialog, setShowNewPaymentDialog] = useState(false);
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [selectedPaymentForPDF, setSelectedPaymentForPDF] = useState(null);
@@ -112,6 +130,36 @@ export default function StudentProfile() {
       qc.invalidateQueries({ queryKey: ['student-payments', id] });
       setShowNewPaymentDialog(false);
     },
+  });
+
+  // Okulda ödenen paketi öğrenciye tanımla (Order kaydı → öğrencinin "Paketlerim" sayfasında görünür)
+  const assignPackageMutation = useMutation({
+    mutationFn: (form) => {
+      const pkg = packages.find(p => p.id === form.package_id);
+      return base44.entities.Order.create({
+        student_id: id,
+        student_email: student?.email,
+        student_name: student?.full_name,
+        package_id: pkg.id,
+        package_name: pkg.name,
+        status: 'paid',
+        source: 'manual',
+        payment_method: form.payment_method,
+        order_date: new Date(form.order_date).toISOString(),
+        amount: parseFloat(pkg.price || 0),
+        notes: form.notes,
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['student-orders', id] });
+      setShowAssignPackage(false);
+      setAssignForm({ package_id: '', payment_method: 'cash', order_date: format(new Date(), 'yyyy-MM-dd'), notes: '' });
+    },
+  });
+
+  const deleteOrderMutation = useMutation({
+    mutationFn: (orderId) => base44.entities.Order.delete(orderId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['student-orders', id] }),
   });
 
   const deleteCertificateMutation = useMutation({
@@ -399,7 +447,46 @@ export default function StudentProfile() {
 
         {/* Courses Tab */}
         <TabsContent value="courses" className="space-y-3 mt-4">
-          <p className="text-sm font-semibold text-muted-foreground">Enrolled Courses</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-muted-foreground">Packages</p>
+            {canEdit && (
+              <Button size="sm" variant="outline" className="gap-1" onClick={() => setShowAssignPackage(true)}>
+                <Plus className="w-3.5 h-3.5" /> Assign Package
+              </Button>
+            )}
+          </div>
+          {studentOrders.length > 0 ? (
+            studentOrders.map(order => (
+              <Card key={order.id}>
+                <CardContent className="p-4 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm truncate">{order.package_name || packages.find(p => p.id === order.package_id)?.name || 'Package'}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {order.order_date && format(new Date(order.order_date), 'PP')}
+                      {' · '}{order.stripe_session_id ? 'Stripe' : (order.payment_method || 'manual').replace('_', ' ')}
+                      {order.amount ? ` · £${Number(order.amount).toFixed(2)}` : ''}
+                    </p>
+                  </div>
+                  {canEdit && !order.stripe_session_id && (
+                    <Button
+                      size="icon" variant="ghost" className="text-destructive flex-shrink-0"
+                      onClick={() => { if (confirm('Remove this package from the student?')) deleteOrderMutation.mutate(order.id); }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <Card>
+              <CardContent className="p-6 text-center text-muted-foreground">
+                <p className="text-sm">No packages assigned</p>
+              </CardContent>
+            </Card>
+          )}
+
+          <p className="text-sm font-semibold text-muted-foreground pt-2">Enrolled Courses</p>
           {enrolledCourses.length > 0 ? (
             enrolledCourses.map(course => (
               <Card key={course.id}>
@@ -790,6 +877,56 @@ export default function StudentProfile() {
           <div className="flex gap-3 pt-2">
             <Button variant="outline" className="flex-1" onClick={() => setShowAddDocument(false)}>Cancel</Button>
             <Button className="flex-1" onClick={handleAddDocument} disabled={!newDocForm.name || !documentFile}>Upload</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Package Dialog */}
+      <Dialog open={showAssignPackage} onOpenChange={setShowAssignPackage}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Assign Package</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Package *</Label>
+              <Select value={assignForm.package_id} onValueChange={v => setAssignForm(f => ({ ...f, package_id: v }))}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Select package" /></SelectTrigger>
+                <SelectContent>
+                  {packages.map(p => <SelectItem key={p.id} value={p.id}>{p.name} — £{p.price}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Paid with</Label>
+                <Select value={assignForm.payment_method} onValueChange={v => setAssignForm(f => ({ ...f, payment_method: v }))}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Cash</SelectItem>
+                    <SelectItem value="credit_card">Card</SelectItem>
+                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Date</Label>
+                <Input className="mt-1" type="date" value={assignForm.order_date} onChange={e => setAssignForm(f => ({ ...f, order_date: e.target.value }))} />
+              </div>
+            </div>
+            <div>
+              <Label>Note</Label>
+              <Input className="mt-1" value={assignForm.notes} onChange={e => setAssignForm(f => ({ ...f, notes: e.target.value }))} />
+            </div>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button variant="outline" className="flex-1" onClick={() => setShowAssignPackage(false)}>Cancel</Button>
+            <Button
+              className="flex-1"
+              onClick={() => assignPackageMutation.mutate(assignForm)}
+              disabled={!assignForm.package_id || !assignForm.order_date || assignPackageMutation.isPending}
+            >
+              Assign
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

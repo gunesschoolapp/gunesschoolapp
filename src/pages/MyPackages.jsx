@@ -10,6 +10,9 @@ import {
   BookOpen, Clock, Award, CheckCircle, ChevronRight, Calendar,
   Video, User, MapPin, Star, Package
 } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+
+const IS_IOS = Capacitor.getPlatform() === 'ios';
 
 export default function MyPackages() {
   const { user: authUser } = useAuth();
@@ -149,14 +152,20 @@ export default function MyPackages() {
             {language === 'tr' ? 'Henüz paket almadınız' : 'No packages yet'}
           </h3>
           <p className="text-sm text-muted-foreground mb-4">
-            {language === 'tr'
-              ? 'Paketler sayfasından bir paket satın alabilirsiniz.'
-              : 'You can purchase a package from the All Packages page.'}
+            {IS_IOS
+              ? (language === 'tr'
+                ? 'Hesabınıza tanımlanan paketler burada görünür.'
+                : 'Packages assigned to your account will appear here.')
+              : (language === 'tr'
+                ? 'Paketler sayfasından bir paket satın alabilirsiniz.'
+                : 'You can purchase a package from the All Packages page.')}
           </p>
-          <Button variant="outline" onClick={() => window.location.href = '#/Packages'}>
-            <BookOpen className="w-4 h-4 mr-2" />
-            {language === 'tr' ? 'Paketlere Git' : 'Browse Packages'}
-          </Button>
+          {!IS_IOS && (
+            <Button variant="outline" onClick={() => window.location.href = '#/Packages'}>
+              <BookOpen className="w-4 h-4 mr-2" />
+              {language === 'tr' ? 'Paketlere Git' : 'Browse Packages'}
+            </Button>
+          )}
         </div>
       )}
 
