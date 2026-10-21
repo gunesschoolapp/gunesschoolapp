@@ -142,6 +142,16 @@ export const AuthProvider = ({ children }) => {
     const currentUser = auth.currentUser;
     if (!currentUser) throw new Error("No authenticated user");
 
+    // 0. Firebase only allows deleting a user who signed in recently (~5 min).
+    // Check this BEFORE touching Firestore, otherwise records get deleted while
+    // the auth user survives (and a new student record is auto-created on next login).
+    const lastSignIn = new Date(currentUser.metadata?.lastSignInTime || 0).getTime();
+    if (Date.now() - lastSignIn > 5 * 60 * 1000) {
+      const err = new Error('requires-recent-login');
+      err.code = 'auth/requires-recent-login';
+      throw err;
+    }
+
     // 1. Delete Firestore records associated with email
     const email = currentUser.email;
     if (email) {

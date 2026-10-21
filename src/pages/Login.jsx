@@ -7,14 +7,16 @@ import {
   GoogleAuthProvider,
   signInWithCredential,
   signInWithPopup,
-  signOut
+  signOut,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { Capacitor } from '@capacitor/core';
 import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
 
 export default function Login() {
   const [activeTab, setActiveTab] = useState('google'); // 'google' or 'email'
-  const [emailMode, setEmailMode] = useState('login'); // 'login' or 'signup'
+  const [emailMode, setEmailMode] = useState('login'); // 'login', 'signup' or 'reset'
+  const [info, setInfo] = useState(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -86,6 +88,34 @@ export default function Login() {
     }
   };
 
+  const handlePasswordReset = async (e) => {
+    e.preventDefault();
+    if (!email) {
+      setError('Lütfen e-posta adresinizi girin.');
+      return;
+    }
+    try {
+      setLoading(true);
+      setError(null);
+      setInfo(null);
+      await sendPasswordResetEmail(auth, email.trim());
+      setInfo('Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Gelen kutunuzu (ve spam klasörünü) kontrol edin.');
+    } catch (err) {
+      console.error('Password reset error:', err);
+      let msg = 'Şifre sıfırlama e-postası gönderilemedi. Lütfen tekrar deneyin.';
+      if (err.code === 'auth/invalid-email') {
+        msg = 'Geçersiz e-posta formatı.';
+      } else if (err.code === 'auth/user-not-found') {
+        msg = 'Bu e-posta adresine ait bir kullanıcı bulunamadı.';
+      } else if (err.code === 'auth/too-many-requests') {
+        msg = 'Çok fazla deneme yapıldı. Lütfen biraz sonra tekrar deneyin.';
+      }
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleEmailSignUp = async (e) => {
     e.preventDefault();
     if (!email || !password || !confirmPassword) {
@@ -147,7 +177,7 @@ export default function Login() {
           {/* Tab Selector */}
           <div className="flex bg-slate-950/60 p-1.5 rounded-2xl border border-white/5 mb-6">
             <button
-              onClick={() => { setActiveTab('google'); setError(null); }}
+              onClick={() => { setActiveTab('google'); setError(null); setInfo(null); }}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
                 activeTab === 'google'
                   ? 'bg-[#dfae5f] text-slate-950 shadow-md'
@@ -158,7 +188,7 @@ export default function Login() {
               Google ile Giriş
             </button>
             <button
-              onClick={() => { setActiveTab('email'); setError(null); }}
+              onClick={() => { setActiveTab('email'); setError(null); setInfo(null); }}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
                 activeTab === 'email'
                   ? 'bg-[#dfae5f] text-slate-950 shadow-md'
@@ -173,6 +203,12 @@ export default function Login() {
           {error && (
             <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-200 rounded-2xl text-xs text-center leading-relaxed">
               {error}
+            </div>
+          )}
+
+          {info && (
+            <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-200 rounded-2xl text-xs text-center leading-relaxed">
+              {info}
             </div>
           )}
 
@@ -202,7 +238,21 @@ export default function Login() {
               </button>
             </div>
           ) : (
-            <form onSubmit={emailMode === 'login' ? handleEmailLogin : handleEmailSignUp} className="space-y-4">
+            <form
+              onSubmit={
+                emailMode === 'login'
+                  ? handleEmailLogin
+                  : emailMode === 'signup'
+                    ? handleEmailSignUp
+                    : handlePasswordReset
+              }
+              className="space-y-4"
+            >
+              {emailMode === 'reset' && (
+                <p className="text-xs text-slate-400 text-center leading-relaxed">
+                  Hesabınıza ait e-posta adresini girin, size şifre sıfırlama bağlantısı gönderelim.
+                </p>
+              )}
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 <input
@@ -214,16 +264,30 @@ export default function Login() {
                 />
               </div>
 
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                <input
-                  type="password"
-                  placeholder="Şifre"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-slate-950/80 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-[#dfae5f] focus:ring-1 focus:ring-[#dfae5f] transition-all text-sm"
-                />
-              </div>
+              {emailMode !== 'reset' && (
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <input
+                    type="password"
+                    placeholder="Şifre"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-slate-950/80 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-[#dfae5f] focus:ring-1 focus:ring-[#dfae5f] transition-all text-sm"
+                  />
+                </div>
+              )}
+
+              {emailMode === 'login' && (
+                <div className="text-right -mt-1">
+                  <button
+                    type="button"
+                    onClick={() => { setEmailMode('reset'); setError(null); setInfo(null); }}
+                    className="text-xs text-slate-400 hover:text-[#dfae5f] font-semibold transition-colors"
+                  >
+                    Şifremi unuttum
+                  </button>
+                </div>
+              )}
 
               {emailMode === 'signup' && (
                 <div className="relative">
@@ -247,8 +311,10 @@ export default function Login() {
                   <div className="w-5 h-5 border-2 border-slate-950/20 border-t-slate-950 rounded-full animate-spin"></div>
                 ) : emailMode === 'login' ? (
                   'Giriş Yap'
-                ) : (
+                ) : emailMode === 'signup' ? (
                   'Kayıt Ol'
+                ) : (
+                  'Sıfırlama Bağlantısı Gönder'
                 )}
               </button>
 
@@ -258,12 +324,15 @@ export default function Login() {
                   onClick={() => {
                     setEmailMode(emailMode === 'login' ? 'signup' : 'login');
                     setError(null);
+                    setInfo(null);
                   }}
                   className="text-xs text-[#dfae5f] hover:text-[#cf9e4f] font-semibold transition-colors"
                 >
                   {emailMode === 'login'
                     ? 'İlk kez mi giriş yapıyorsunuz? Kaydolun'
-                    : 'Zaten bir hesabınız var mı? Giriş Yapın'}
+                    : emailMode === 'signup'
+                      ? 'Zaten bir hesabınız var mı? Giriş Yapın'
+                      : 'Giriş ekranına dön'}
                 </button>
               </div>
             </form>

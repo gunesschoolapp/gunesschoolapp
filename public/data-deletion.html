@@ -226,7 +226,7 @@
         <p>Hesap ve veri silme talebinizi aşağıdaki yöntemlerden biriyle yapabilirsiniz:</p>
         <ol>
           <li><strong>Uygulama İçi:</strong> Profil sayfanızdaki "Hesabımı Sil" butonunu kullanarak doğrudan talep oluşturabilirsiniz.</li>
-          <li><strong>E-posta ile:</strong> Kayıtlı e-posta adresinizden aşağıdaki taslağı doldurarak <strong>info@gunesenglish.com</strong> adresine talep gönderebilirsiniz.</li>
+          <li><strong>E-posta ile:</strong> Kayıtlı e-posta adresinizden aşağıdaki taslağı doldurarak <strong>gunesschoolapp@gmail.com</strong> adresine talep gönderebilirsiniz.</li>
         </ol>
 
         <h2>E-posta ile Talep Gönderin</h2>
@@ -251,7 +251,7 @@
           </span>
         </div>
         <br>
-        <a href="mailto:info@gunesenglish.com?subject=Gunes English School Hesap Silme Talebi" id="tr-mailto-btn" class="btn-submit">E-posta Uygulamasını Aç ve Gönder</a>
+        <a href="mailto:gunesschoolapp@gmail.com?subject=Gunes English School Hesap Silme Talebi" id="tr-mailto-btn" class="btn-submit">E-posta Uygulamasını Aç ve Gönder</a>
       </div>
 
       <!-- ENGLISH CONTENT -->
@@ -273,7 +273,7 @@
         <p>You can request account and data deletion in two ways:</p>
         <ol>
           <li><strong>In-App:</strong> Go to your Profile settings screen inside the app and click the "Delete Account" button.</li>
-          <li><strong>By Email:</strong> Send a deletion request to <strong>info@gunesenglish.com</strong> from your registered email address using the template below.</li>
+          <li><strong>By Email:</strong> Send a deletion request to <strong>gunesschoolapp@gmail.com</strong> from your registered email address using the template below.</li>
         </ol>
 
         <h2>Submit Request via Email</h2>
@@ -298,7 +298,7 @@
           </span>
         </div>
         <br>
-        <a href="mailto:info@gunesenglish.com?subject=Gunes English School Account Deletion Request" id="en-mailto-btn" class="btn-submit">Open Mail Client & Send</a>
+        <a href="mailto:gunesschoolapp@gmail.com?subject=Gunes English School Account Deletion Request" id="en-mailto-btn" class="btn-submit">Open Mail Client & Send</a>
       </div>
 
       <div class="footer">
@@ -332,7 +332,7 @@
       document.getElementById('tr-template-text').innerHTML = template;
       
       const plainText = `Merhaba Güneş English School Ekibi,\n\nUygulamanızda kullandığım hesabın ve ilişkili tüm kişisel verilerimin kalıcı olarak silinmesini talep ediyorum.\n\nKayıtlı İsim: ${name}\nKayıtlı E-posta: ${email}\n\nGereğini rica ederim.`;
-      document.getElementById('tr-mailto-btn').href = `mailto:info@gunesenglish.com?subject=Gunes English School Hesap Silme Talebi&body=${encodeURIComponent(plainText)}`;
+      document.getElementById('tr-mailto-btn').href = `mailto:gunesschoolapp@gmail.com?subject=Gunes English School Hesap Silme Talebi&body=${encodeURIComponent(plainText)}`;
     }
 
     function updateEnMail() {
@@ -343,7 +343,7 @@
       document.getElementById('en-template-text').innerHTML = template;
       
       const plainText = `Hello Güneş English School Team,\n\nI would like to request the permanent deletion of my account and all associated personal data from your systems.\n\nRegistered Name: ${name}\nRegistered Email: ${email}\n\nBest regards.`;
-      document.getElementById('en-mailto-btn').href = `mailto:info@gunesenglish.com?subject=Gunes English School Account Deletion Request&body=${encodeURIComponent(plainText)}`;
+      document.getElementById('en-mailto-btn').href = `mailto:gunesschoolapp@gmail.com?subject=Gunes English School Account Deletion Request&body=${encodeURIComponent(plainText)}`;
     }
 
     function copyTemplate(lang) {
